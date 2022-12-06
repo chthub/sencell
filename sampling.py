@@ -501,8 +501,8 @@ def identify_sen_genes(sencell_dict, nonsencell_dict, edge, att, sen_gene_num):
     # sen_gene_num=100
     # non_sen_gene_num=50
     # 怀疑这里的基因数量可能会影响结果
-    sen_gene_ls = [k for k, v in sorted(sen_gene_dict.items(
-    ), key=lambda item: item[1][0]/item[1][1])][-sen_gene_num:]
+    sen_gene_ls = [k for k, v in sorted(sen_gene_dict.items(), 
+                    key=lambda item: item[1][0]/item[1][1])][-sen_gene_num:]
     return sen_gene_ls
 
 

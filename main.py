@@ -28,8 +28,10 @@ parser = argparse.ArgumentParser(description='Main program for sencells')
 parser.add_argument('--output_dir', type=str, default='./outputs', help='')
 parser.add_argument('--exp_name', type=str, default='', help='')
 parser.add_argument('--sencell_num', type=int, default=100, help='')
+parser.add_argument('--cell_optim_epoch', type=int, default=15, help='')
 parser.add_argument('--device_index', type=int, default=0, help='')
 parser.add_argument('--retrain', action='store_true', default=False, help='')
+
 
 if is_jupyter:
     args = parser.parse_args(args=[])
@@ -55,6 +57,8 @@ if 's5' in args.exp_name:
     adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data()
 elif 'healthy' in args.exp_name:
     adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data_healthy()
+elif 'disease1' in args.exp_name:
+    adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data_disease1()
 elif 'disease' in args.exp_name:
     adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data_disease()
 
@@ -129,7 +133,7 @@ for iteration in range(5):
                                                                                                                gene_rate=0.3, cell_rate=0.5,
                                                                                                                debug=False)
     old_sengene_indexs = all_marker_index
-    for epoch in range(10):
+    for epoch in range(args.cell_optim_epoch):
         logger.info(f"epoch: {epoch}")
         old_sencell_dict = sencell_dict
         cellmodel, sencell_dict, nonsencell_dict = cell_optim(cellmodel, optimizer,

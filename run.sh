@@ -3,7 +3,7 @@
 #SBATCH --output="log/%j_log.txt"
 #SBATCH --account=PCON0022
 #SBATCH --nodes=1
-#SBATCH --mem=16G
+#SBATCH --mem=50G
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --time=10:00:00
 #SBATCH --gpus-per-node=1
@@ -20,11 +20,17 @@ set -x
 
 # conda activate deepmaps_env
 
-dataset_name=s5
+# dataset_name=disease
+# sencell_num=250
+
+# dataset_name=disease1
+# sencell_num=250
+
+dataset_name=healthy
 sencell_num=100
 
-# env=osc
-env=server
+env=osc
+# env=server
 
 
 if [ $env == server ]; then
@@ -81,3 +87,28 @@ fi
 # Submitted batch job 13989669
 # Submitted batch job 13989670
 # Submitted batch job 13989671
+
+# healthy, sencell=100
+# Submitted batch job 13992830
+# Submitted batch job 13992837
+# Submitted batch job 13992838
+
+# disease, sencell=250, out of memory
+# Submitted batch job 13992831
+# Submitted batch job 13992833
+# Submitted batch job 13992834
+
+# disease, sencell=250
+# Submitted batch job 13995010
+# Submitted batch job 13995011
+# Submitted batch job 13995012
+
+# disease1, sencell=250
+# Submitted batch job 14000959
+# Submitted batch job 14000964
+# Submitted batch job 14000965
+
+# healthy, sencell=100, 15轮
+# Submitted batch job 14000967
+# Submitted batch job 14000968
+# Submitted batch job 14000969

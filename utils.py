@@ -35,11 +35,14 @@ def load_data(path="./data/SCB01S5.h5ad"):
 
 def load_data_healthy(path="./data/combined_g8.h5ad"):
     adata = sp.read_h5ad(path)
+    labels=pd.read_csv("./data/g8_query_emb.csv",index_col=0)
+    adata.obs['ann_level_3_pred']=labels['ann_level_3_pred']
+
     adata = adata[adata.obs['disease'] == 'Healthy']
 
-    labels=pd.read_csv("./data/g8_query_emb.csv",index_col=0)
+    
     # celltype_names = list(adata.obs['cell_type_seurat'].value_counts().index)
-    celltype_names=list(labels['ann_level_3_pred'].value_counts().index)
+    celltype_names=list(adata.obs['ann_level_3_pred'].value_counts().index)
 
     print("cluster 数量：", len(celltype_names))
     print("celltype names:", celltype_names)
@@ -50,7 +53,7 @@ def load_data_healthy(path="./data/combined_g8.h5ad"):
     # 所有cell的index
     all_indexs = np.arange(adata.shape[0])
     for i, celltype_name in enumerate(celltype_names):
-        cell_indexs = all_indexs[adata.obs['cell_type_seurat']
+        cell_indexs = all_indexs[adata.obs['ann_level_3_pred']
                                  == celltype_name]
         cluster_cell_ls.append(cell_indexs)
         cell_cluster_arr[cell_indexs] = i
@@ -63,10 +66,13 @@ def load_data_healthy(path="./data/combined_g8.h5ad"):
 
 def load_data_disease(path="./data/combined_g8.h5ad"):
     adata = sp.read_h5ad(path)
+    labels=pd.read_csv("./data/g8_query_emb.csv",index_col=0)
+    adata.obs['ann_level_3_pred']=labels['ann_level_3_pred']
+
     adata = adata[adata.obs['disease'] != 'Healthy']
 
     # celltype_names = list(adata.obs['cell_type_seurat'].value_counts().index)
-    celltype_names=list(labels['ann_level_3_pred'].value_counts().index)
+    celltype_names=list(adata.obs['ann_level_3_pred'].value_counts().index)
     print("cluster 数量：", len(celltype_names))
     print("celltype names:", celltype_names)
     # 2d-list, 存储每个cluster里面包含的cell index
@@ -76,7 +82,37 @@ def load_data_disease(path="./data/combined_g8.h5ad"):
     # 所有cell的index
     all_indexs = np.arange(adata.shape[0])
     for i, celltype_name in enumerate(celltype_names):
-        cell_indexs = all_indexs[adata.obs['cell_type_seurat']
+        cell_indexs = all_indexs[adata.obs['ann_level_3_pred']
+                                 == celltype_name]
+        cluster_cell_ls.append(cell_indexs)
+        cell_cluster_arr[cell_indexs] = i
+
+    outputs = [[celltype_names[i], len(j)]
+               for i, j in enumerate(cluster_cell_ls)]
+    print(tabulate(outputs))
+    return adata, cluster_cell_ls, cell_cluster_arr, celltype_names
+
+
+def load_data_disease1(path="./data/combined_g8.h5ad"):
+    print('load data disease1!')
+    adata = sp.read_h5ad(path)
+    labels=pd.read_csv("./data/g8_query_emb.csv",index_col=0)
+    adata.obs['ann_level_3_pred']=labels['ann_level_3_pred']
+
+    adata=adata[(adata.obs['orig.ident']=='SCB01S2') | (adata.obs['orig.ident']=='SCB01S4')]
+
+    # celltype_names = list(adata.obs['cell_type_seurat'].value_counts().index)
+    celltype_names=list(adata.obs['ann_level_3_pred'].value_counts().index)
+    print("cluster 数量：", len(celltype_names))
+    print("celltype names:", celltype_names)
+    # 2d-list, 存储每个cluster里面包含的cell index
+    cluster_cell_ls = []
+    # 1d-array，存储每个cell的cluster index
+    cell_cluster_arr = np.array([0]*adata.shape[0])
+    # 所有cell的index
+    all_indexs = np.arange(adata.shape[0])
+    for i, celltype_name in enumerate(celltype_names):
+        cell_indexs = all_indexs[adata.obs['ann_level_3_pred']
                                  == celltype_name]
         cluster_cell_ls.append(cell_indexs)
         cell_cluster_arr[cell_indexs] = i
