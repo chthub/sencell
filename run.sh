@@ -8,6 +8,12 @@
 #SBATCH --time=10:00:00
 #SBATCH --gpus-per-node=1
 
+if  [ ! -d  "./log"  ]; then
+mkdir log
+
+if  [ ! -d  "./outputs"  ]; then
+mkdir outputs
+
 set -x
 
 # conda activate deepmaps_env
