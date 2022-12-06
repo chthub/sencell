@@ -5,7 +5,6 @@ import torch
 import umap
 import matplotlib.pyplot as plt
 import pandas as pd
-from community import community_louvain
 from torch_geometric.utils import k_hop_subgraph, to_networkx, from_networkx
 import matplotlib
 
@@ -29,6 +28,7 @@ parser = argparse.ArgumentParser(description='Main program for sencells')
 parser.add_argument('--output_dir', type=str, default='./outputs', help='')
 parser.add_argument('--exp_name', type=str, default='', help='')
 parser.add_argument('--sencell_num', type=int, default=100, help='')
+parser.add_argument('--device_index', type=int, default=0, help='')
 parser.add_argument('--retrain', action='store_true', default=False, help='')
 
 if is_jupyter:
@@ -75,7 +75,7 @@ graph_nx = utils.build_graph_nx(
 logger.info("Part 1, data loading and processing end!")
 
 # Part 2: generate init embedding
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device(f"cuda:{args.device_index}" if torch.cuda.is_available() else "cpu")
 print('device:', device)
 args.device = device
 

@@ -8,11 +8,13 @@
 #SBATCH --time=10:00:00
 #SBATCH --gpus-per-node=1
 
-if  [ ! -d  "./log"  ]; then
-mkdir log
+if [ ! -d "./log" ]; then
+    mkdir log
+fi
 
-if  [ ! -d  "./outputs"  ]; then
-mkdir outputs
+if [ ! -d "./outputs" ]; then
+    mkdir outputs
+fi
 
 set -x
 
@@ -21,15 +23,34 @@ set -x
 dataset_name=s5
 sencell_num=100
 
-cd /users/PCON0022/haocheng/sencell/outputs
-mkdir ${SLURM_JOB_ID}
-cd ..
+# env=osc
+env=server
 
-time ~/.conda/envs/deepmaps_env/bin/python -u main.py \
-                                        --exp_name ${dataset_name}_${SLURM_JOB_ID} \
-                                        --output_dir ./outputs/${SLURM_JOB_ID} \
-                                        --sencell_num ${sencell_num} \
-                                        --retrain
+
+if [ $env == server ]; then
+    cd outputs
+    dir_name=$RANDOM 
+    mkdir $dir_name
+    cd ..
+
+    time python -u main.py \
+        --exp_name ${dataset_name}_${dir_name} \
+        --output_dir ./outputs/${dir_name} \
+        --sencell_num ${sencell_num} \
+        --device_index 1 --retrain
+
+elif [ $env == 'osc' ]; then
+    cd /users/PCON0022/haocheng/sencell/outputs
+    mkdir ${SLURM_JOB_ID}
+    cd ..
+    
+    time ~/.conda/envs/deepmaps_env/bin/python -u main.py \
+                                            --exp_name ${dataset_name}_${SLURM_JOB_ID} \
+                                            --output_dir ./outputs/${SLURM_JOB_ID} \
+                                            --sencell_num ${sencell_num} \
+                                            --retrain
+fi
+
 
 # 固定nonsengene选择的随机种子，sencellnum=75
 # Submitted batch job 13978331
