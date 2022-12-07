@@ -11,7 +11,7 @@ import matplotlib
 import utils
 import plots
 from model_AE import reduction_AE
-from model_GAT import Encoder, SenGAE, train_GAT
+from model_GAT import Encoder, SenGAE, train_GAT, train_GAT_new
 from model_Sencell import Sencell
 from sampling import sub_sampling_by_random
 from model_Sencell import cell_optim, update_cell_embeddings
@@ -61,6 +61,8 @@ elif 'disease1' in args.exp_name:
     adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data_disease1()
 elif 'disease' in args.exp_name:
     adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data_disease()
+elif 'hd' in args.exp_name:
+    adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data_healthy_disease()
 
 # plots.umapPlot(adata.obsm['X_umap'],clusters=cell_cluster_arr,labels=celltype_names)
 
@@ -159,3 +161,5 @@ for iteration in range(5):
 outputs_path = os.path.join(args.output_dir, f'{args.exp_name}_outputs.data')
 print("Experiments saved!", outputs_path)
 torch.save([sencell_dict, sen_gene_indexs], outputs_path)
+
+logger.info("Part 4, sencell optim end!")

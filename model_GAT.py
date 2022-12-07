@@ -161,7 +161,7 @@ def train_GAT(graph_nx, graph, args, retrain=False, resampling=False):
         for sampled_graph in jobs:
             sampled_graph = sampled_graph.to(args.device)
             loss_ls = []
-            for epoch in range(5):
+            for epoch in range(1):
                 optimizer.zero_grad()
                 z = model(sampled_graph)
                 loss = model.recon_loss(z, sampled_graph.edge_index)
@@ -173,6 +173,41 @@ def train_GAT(graph_nx, graph, args, retrain=False, resampling=False):
             print('subgraph loss: ', subgraph_loss)
     #         scheduler.step(subgraph_loss)
         print('EPOCH loss', np.mean(epoch_ls))
+
+    torch.save(model, os.path.join(args.output_dir, f'{args.exp_name}_gat.pt'))
+    return model
+
+
+def train_GAT_new(graph_nx, graph, args, retrain=False, resampling=False):
+    # 不采样了，直接训练整个图
+    # CUDA out of memory
+    # step 1: init model
+    model = SenGAE().to(args.device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001,
+                                 weight_decay=1e-2)
+    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    #     optimizer, 'min', factor=0.5, patience=10, verbose=True)
+    # optimizer = torch.optim.RMSprop(model.parameters(), lr=0.0001, alpha=0.99,
+    #                                 weight_decay=1e-4)
+
+    # step 2: load or training
+    if not retrain:
+        model = torch.load(os.path.join(
+            args.output_dir, f'{args.exp_name}_gat.pt'))
+        return model
+
+    # step 4: training
+    model.train()
+    graph=graph.to(args.device)
+    for EPOCH in range(30):
+        print('Epoch: ', EPOCH)
+        optimizer.zero_grad()
+        z = model(graph)
+        loss = model.recon_loss(z, graph.edge_index)
+        loss.backward()
+        optimizer.step()
+
+        print('graph loss: ', loss.item())
 
     torch.save(model, os.path.join(args.output_dir, f'{args.exp_name}_gat.pt'))
     return model

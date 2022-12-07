@@ -26,8 +26,11 @@ set -x
 # dataset_name=disease1
 # sencell_num=250
 
-dataset_name=healthy
-sencell_num=100
+# dataset_name=healthy
+# sencell_num=100
+
+dataset_name=hd
+sencell_num=350
 
 env=osc
 # env=server
@@ -112,3 +115,18 @@ fi
 # Submitted batch job 14000967
 # Submitted batch job 14000968
 # Submitted batch job 14000969
+
+# healthy, sencell=100， gat epoch=1
+# Submitted batch job 14001068
+# Submitted batch job 14001069
+# Submitted batch job 14001070
+
+# disease1, sencell=250, gat epoch=1
+# Submitted batch job 14001082
+# Submitted batch job 14001083
+# Submitted batch job 14001084
+
+# hd, sencell num=350
+# Submitted batch job 14001124
+# Submitted batch job 14001125
+# Submitted batch job 14001126
