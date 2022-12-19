@@ -27,10 +27,12 @@ parser = argparse.ArgumentParser(description='Main program for sencells')
 
 parser.add_argument('--output_dir', type=str, default='./outputs', help='')
 parser.add_argument('--exp_name', type=str, default='', help='')
-parser.add_argument('--sencell_num', type=int, default=100, help='')
-parser.add_argument('--cell_optim_epoch', type=int, default=15, help='')
 parser.add_argument('--device_index', type=int, default=0, help='')
 parser.add_argument('--retrain', action='store_true', default=False, help='')
+
+parser.add_argument('--gat_epoch', type=int, default=30, help='')
+parser.add_argument('--sencell_num', type=int, default=100, help='')
+parser.add_argument('--cell_optim_epoch', type=int, default=15, help='')
 
 
 if is_jupyter:
@@ -134,6 +136,7 @@ for iteration in range(5):
                                                                                                                    all_marker_index),
                                                                                                                gene_rate=0.3, cell_rate=0.5,
                                                                                                                debug=False)
+    exit()
     old_sengene_indexs = all_marker_index
     for epoch in range(args.cell_optim_epoch):
         logger.info(f"epoch: {epoch}")

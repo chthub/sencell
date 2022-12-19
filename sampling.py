@@ -372,12 +372,12 @@ def get_cell_scores_par2(cell_indexs, edge, att, big_graph_index_dict, sen_gene_
 def identify_sencell_nonsencell(edge, att, sen_gene_indexs, nonsen_gene_indexs, cell_clusters, big_graph_index_dict, args):
     cell_indexs = list(cell_clusters.keys())
     # 存储每个cell的score, {cell_index:[sen_score,nonsen_score]}
-    # with CodeTimer("get_cell_scores_par2",unit="s"):
-    cell_score_dict = get_cell_scores_par2(
-        cell_indexs, edge, att, big_graph_index_dict, sen_gene_indexs, nonsen_gene_indexs)
+    with CodeTimer("get_cell_scores_par2",unit="s"):
+        cell_score_dict = get_cell_scores_par2(
+            cell_indexs, edge, att, big_graph_index_dict, sen_gene_indexs, nonsen_gene_indexs)
     from utils import save_objs
     save_objs([cell_score_dict, big_graph_index_dict], os.path.join(
-        args.output_dir, f'{args.exp_name}_cell_score_dict_test'))
+        args.output_dir, f'{args.exp_name}_cell_score_dict'))
 
     # score从小到大
     sencell_indexs = np.array([k for k, v in sorted(

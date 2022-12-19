@@ -108,7 +108,7 @@ def sampling_jobs_seq(graph_nx, graph, args):
 
 def sampling_jobs_par(graph_nx, graph, args):
     from multiprocessing import Pool
-    # 采样并行
+    # 采样并行，多进程版
     # 并行版本报错，未解决
     t0 = time.time()
     num_subgraphs = 50
@@ -155,7 +155,7 @@ def train_GAT(graph_nx, graph, args, retrain=False, resampling=False):
 
     # step 4: training
     model.train()
-    for EPOCH in range(30):
+    for EPOCH in range(args.gat_epoch):
         epoch_ls = []
         print('Epoch: ', EPOCH)
         for sampled_graph in jobs:

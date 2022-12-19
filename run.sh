@@ -3,6 +3,7 @@
 #SBATCH --output="log/%j_log.txt"
 #SBATCH --account=PCON0022
 #SBATCH --nodes=1
+#SBATCH --ntasks=32
 #SBATCH --mem=50G
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --time=10:00:00
@@ -23,14 +24,14 @@ set -x
 # dataset_name=disease
 # sencell_num=250
 
-# dataset_name=disease1
-# sencell_num=250
+dataset_name=disease1
+sencell_num=250
 
 # dataset_name=healthy
 # sencell_num=100
 
-dataset_name=hd
-sencell_num=350
+# dataset_name=hd
+# sencell_num=350
 
 env=osc
 # env=server
@@ -56,6 +57,7 @@ elif [ $env == 'osc' ]; then
     time ~/.conda/envs/deepmaps_env/bin/python -u main.py \
                                             --exp_name ${dataset_name}_${SLURM_JOB_ID} \
                                             --output_dir ./outputs/${SLURM_JOB_ID} \
+                                            --gat_epoch 30 \
                                             --sencell_num ${sencell_num} \
                                             --retrain
 fi
