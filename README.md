@@ -32,7 +32,7 @@ Ensure you have Python 3.8 or later installed. This project is developed and tes
 
 2. **Set Up a Virtual Environment** (recommended):
    ```bash
-   conda create -n sencell_env python=3.9
+   conda create -n sencell_env python=3.8
    conda activate sencell_env
    ```
 
