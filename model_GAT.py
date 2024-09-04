@@ -4,9 +4,11 @@ from torch.nn import functional as F
 import torch.utils.data as Data
 import numpy as np
 
-from torch_geometric.nn import Sequential, GATConv
+from torch_geometric.nn import Sequential, GATConv, TransformerConv
 from torch.nn import Linear, ReLU, Dropout
 from torch_geometric.nn.models import InnerProductDecoder, GAE, VGAE
+from torch_geometric.nn import GATConv, GAE
+
 
 from sampling import sub_sampling_GAT
 from tqdm import tqdm
@@ -14,6 +16,33 @@ from tqdm import tqdm
 import os
 import time
 
+
+# Define GAT-based encoder for GAE
+class GATEncoder(torch.nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(GATEncoder, self).__init__()
+        self.conv1 = GATConv(in_channels, 32, heads=1, dropout=0.6)
+        self.conv2 = GATConv(32 * 1, out_channels, heads=1, concat=True, dropout=0.6)
+
+    def forward(self, x, edge_index):
+        x = self.conv1(x, edge_index)
+        x = F.elu(x)
+        x = self.conv2(x, edge_index)
+        return x
+
+# Initialize GAE model with GAT encoder and move it to the GPU
+class GAEModel(GAE):
+    def __init__(self, in_channels, out_channels):
+        encoder = GATEncoder(in_channels, out_channels)
+        super(GAEModel, self).__init__(encoder)
+
+    def get_attention_scores(self, data):
+        x, edge_index = data.x, data.edge_index
+        # Pass data through the first GAT layer to get attention scores
+        _, (edge_index_selfloop, alpha) = self.encoder.conv1(x, edge_index, return_attention_weights=True)
+        # matrix shape: number of edges x number of heads
+        return edge_index_selfloop,alpha
+    
 
 class Encoder(torch.nn.Module):
     def __init__(self, dim=128):
@@ -25,6 +54,9 @@ class Encoder(torch.nn.Module):
         # 为了后面的处理，这里去掉自环
         self.conv1 = GATConv(dim, dim, add_self_loops=False)
         self.conv2 = GATConv(dim, dim, add_self_loops=False)
+        
+        # self.conv1 = TransformerConv(dim, dim, heads=1)
+        # self.conv2 = TransformerConv(dim, dim, heads=1)
 
         self.act = torch.nn.CELU()
 
@@ -61,7 +93,7 @@ class Encoder(torch.nn.Module):
 
     def get_att(self, graph):
         x, edge_index,  y = graph.x, graph.edge_index, graph.y
-
+        print(x.shape,y.shape)
         x_gene = F.relu(self.linear1(x[y, :]))
         x_cell = F.relu(self.linear2(x[torch.bitwise_not(y), :]))
         x = self.cat(x_gene, x_cell, y)
@@ -128,7 +160,7 @@ def sampling_jobs_par(graph_nx, graph, args):
     return jobs
 
 
-def train_GAT(graph_nx, graph, args, retrain=False, resampling=False):
+def train_GAT(graph_nx, graph, args, retrain=False, resampling=False,wandb=None):
     # step 1: init model
     model = SenGAE().to(args.device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001,
@@ -140,6 +172,7 @@ def train_GAT(graph_nx, graph, args, retrain=False, resampling=False):
 
     # step 2: load or training
     if not retrain:
+        print('skip training!')
         model = torch.load(os.path.join(
             args.output_dir, f'{args.exp_name}_gat.pt'))
         return model
@@ -171,6 +204,8 @@ def train_GAT(graph_nx, graph, args, retrain=False, resampling=False):
             subgraph_loss = np.mean(loss_ls)
             epoch_ls.append(subgraph_loss)
             print('subgraph loss: ', subgraph_loss)
+            if wandb is not None:
+                wandb.log({"subgraph loss":loss})
     #         scheduler.step(subgraph_loss)
         print('EPOCH loss', np.mean(epoch_ls))
 

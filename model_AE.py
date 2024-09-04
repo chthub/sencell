@@ -47,6 +47,8 @@ def reduction_AE(gene_cell, device):
 
 def train_AE(feature, ba, device, alpha=0.5, is_init=False):
     model = AE(dim=feature.shape[1]).to(device)
+    model.train()
+    
     loader = Data.DataLoader(feature, ba)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 

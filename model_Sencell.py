@@ -43,15 +43,19 @@ def getPrototypeEmb(sencell_dict, cluster_sencell, emb_pos=2):
 class Sencell(torch.nn.Module):
     def __init__(self, dim=128):
         super().__init__()
-        self.linear1 = Linear(dim, 256)
-        self.linear2 = Linear(256, 256)
-        self.linear3 = Linear(256, 256)
-        self.linear4 = Linear(256, dim)
+        self.hidden_size=128
+        self.linear1 = Linear(dim, self.hidden_size)
+        self.linear2 = Linear(self.hidden_size, self.hidden_size)
+        self.linear21 = Linear(self.hidden_size, self.hidden_size)
+        self.linear22 = Linear(self.hidden_size, self.hidden_size)
+        self.linear3 = Linear(self.hidden_size, self.hidden_size)
+        self.linear4 = Linear(self.hidden_size, dim)
         # encoder_layer = torch.nn.TransformerEncoderLayer(d_model=128, nhead=8)
         # self.transformer_encoder = torch.nn.TransformerEncoder(encoder_layer,
         #                                                        num_layers=2)
         self.act = torch.nn.CELU()
-        self.levels = torch.nn.Parameter(torch.tensor([0, 1.25, 0.75, 2]),
+        self.layer_norm = nn.LayerNorm(self.hidden_size)
+        self.levels = torch.nn.Parameter(torch.tensor([0, 0, 4., 4]),
                                          requires_grad=True)
         # self.levels = torch.tensor([-3.0, -1, 1, 3.0])
         self.device = None
@@ -79,11 +83,39 @@ class Sencell(torch.nn.Module):
         x = self.catEmbeddings(sencell_dict, nonsencell_dict).to(device)
         self.device = device
 
-        x = self.linear2(self.act(self.linear1(x)))
+        # model1
+        # x = self.linear2(self.act(self.linear1(x)))
+        # x = self.linear4(self.act(self.linear3(x)))
+        
+        # model 2
+        x=self.act(self.linear1(x))
+        x=x+self.act(self.linear2(x))
+        x=self.layer_norm(x)
+        x=x+self.act(self.linear22(self.act(self.linear21(x))))
+        x=self.layer_norm(x)
         x = self.linear4(self.act(self.linear3(x)))
 
         result = self.updateDict(x, sencell_dict, nonsencell_dict)
         return result
+    
+    def get_embeddings(self,embs,device):
+        x = embs.to(device)
+        self.device = device
+
+        # model1
+        # x = self.linear2(self.act(self.linear1(x)))
+        # x = self.linear4(self.act(self.linear3(x)))
+        
+        # model 2
+        x=self.act(self.linear1(x))
+        x=x+self.act(self.linear2(x))
+        x=self.layer_norm(x)
+        x=x+self.act(self.linear22(self.act(self.linear21(x))))
+        x=self.layer_norm(x)
+        x = self.linear4(self.act(self.linear3(x)))
+        
+        return x
+    
 
     def prototypeLoss(self, distances):
         results = 0
@@ -171,12 +203,12 @@ class Sencell(torch.nn.Module):
         d3 = self.get_d3(nonsencell_dict, cluster_nonsencell,
                          prototype_emb, emb_pos)
         # d4表示不同细胞类型之间，老化和非老化之间的距离
-        d4 = self.get_d4(nonsencell_dict, cluster_nonsencell,
-                         prototype_emb, emb_pos)
-        return d1, d2, d3, d4
+        # d4 = self.get_d4(nonsencell_dict, cluster_nonsencell,
+        #                  prototype_emb, emb_pos)
+        return d1, d2, d3
 
     def getMultiLevelDistanceLoss(self, distances):
-        d1, d2, d3, d4 = distances
+        d1, d2, d3 = distances
         result = 0
 
         def distanceDiff(cluster_d, level):
@@ -186,13 +218,15 @@ class Sencell(torch.nn.Module):
             for d in cluster_d:
                 result += (d-level).abs()
                 count += 1
+            if count==0:
+                return 0
             return result/count
 
-        for cluster_d_1, cluster_d_2, cluster_d_3, cluster_d_4 in zip(d1, d2, d3, d4):
+        for cluster_d_1, cluster_d_2, cluster_d_3 in zip(d1, d2, d3):
             result += distanceDiff(cluster_d_1, self.levels[0])
             result += distanceDiff(cluster_d_2, self.levels[1])
             result += distanceDiff(cluster_d_3, self.levels[2])
-            result += distanceDiff(cluster_d_4, self.levels[3])
+            # result += distanceDiff(cluster_d_4, self.levels[3])
 
         return result
 
@@ -212,17 +246,35 @@ class Sencell(torch.nn.Module):
         return loss
 
 
-def cell_optim(cellmodel, optimizer, sencell_dict, nonsencell_dict, args, train=False):
+def process_dict(cell_dict,dgl_graph,args):
+    if dgl_graph is None:
+        for key in cell_dict:
+            cell_index=cell_dict[key][-1]-args.gene_num
+    else:
+        for key in cell_dict:
+            cell_index=cell_dict[key][-1]-args.gene_num
+            cell_dict[key][0]=torch.cat([cell_dict[key][0], 
+                                        dgl_graph.nodes[cell_index].data['pos_enc'].reshape(-1,)
+                                        ])
+    return cell_dict
+
+
+def cell_optim(cellmodel, optimizer, sencell_dict, nonsencell_dict,dgl_graph, args, train=False,wandb=None):
     # optimizer = torch.optim.RMSprop(cellmodel.parameters(), lr=0.1, alpha=0.5,
     #                                 weight_decay=1e-4)
     if train:
         cellmodel.train()
-        for epoch in range(20):
+        sencell_dict=process_dict(sencell_dict,dgl_graph,args)
+        nonsencell_dict=process_dict(nonsencell_dict,dgl_graph,args)
+        
+        for epoch in range(args.cell_optim_epoch):
             optimizer.zero_grad()
             sencell_dict, nonsencell_dict = cellmodel(
                 sencell_dict, nonsencell_dict, args.device)
             loss = cellmodel.loss(sencell_dict, nonsencell_dict)
             print(loss.item())
+            if wandb is not None:
+                wandb.log({"loss":loss})
             loss.backward()
             optimizer.step()
 
