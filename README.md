@@ -49,7 +49,7 @@ Ensure you have Python 3.8 or later installed. This project is developed and tes
 Run the main script using the following command with required flags:
 
 ```bash
-python main.py --output_dir ./outputs --exp_name "YourExperimentName" --device_index 0
+python main3.py --output_dir ./outputs --exp_name "YourExperimentName" --device_index 0
 ```
 
 #### Important Arguments
@@ -63,7 +63,7 @@ python main.py --output_dir ./outputs --exp_name "YourExperimentName" --device_i
 To run the script for processing a specific dataset with GPU acceleration:
 
 ```bash
-python main.py --exp_name "Experiment_On_Disease" --output_dir ./outputs --device_index 0 --retrain
+python main3.py --exp_name "Experiment_On_Disease" --output_dir ./outputs --device_index 0 --retrain
 ```
 
 ## Modules and Functions
