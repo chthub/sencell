@@ -504,31 +504,6 @@ def get_sorted_sengene(sencell_dict,gene_cell,edge_index_selfloop,attention_scor
 
 
 # For @Hao
-# calculate outliers
-# scores: SnC socres of cells
-# --------------------------------------------------------------------------------------------------- #
-# explain this model as above standard
-def calculate_outliers(scores):
-    counts=0
-    snc_index=[]
-    
-    Q1 = np.percentile(scores, 25)
-    Q3 = np.percentile(scores, 75)
-    IQR = Q3 - Q1
-    lower_bound = Q1 - 1.5 * IQR
-    upper_bound = Q3 + 1.5 * IQR
-    
-    for i,score in enumerate(scores): 
-        if score > upper_bound:
-            counts+=1
-            snc_index.append(i)
-    
-    
-    return counts,snc_index
-# --------------------------------------------------------------------------------------------------- #
-
-
-# For @Hao
 # Hao: generate cell type specific snc scores
 # graph_nx: graph object
 # gene_cell: gene cell matrix
@@ -577,6 +552,8 @@ def generate_ct_specific_scores(sen_gene_ls,gene_cell,edge_index_selfloop,
 
 
 # For @Hao
+# calculate outliers
+# scores: SnC socres of cells
 # --------------------------------------------------------------------------------------------------- #
 def calculate_outliers_v1(scores_index):
     scores_index=np.array(scores_index)
