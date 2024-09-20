@@ -196,9 +196,27 @@ elif 'data2' in args.exp_name:
     
 # plots.umapPlot(adata.obsm['X_umap'],clusters=cell_cluster_arr,labels=celltype_names)
 
+
+
+
+
+
+# For @Hao
+# --------------------------------------------------------------------------------------------------- #
+# please confirm this code and provide interpretation for details, 
+# for example, 
+# (1) we find senescence_marker_list.csv this file appear in these code context, you need make sure every hidden parameter can be involved.
+# (2) what is new_data, so, what is the differences previous data("combined1", "combined2", and "combined3") and it???
 new_data, markers_index,\
     sen_gene_ls, nonsen_gene_ls, gene_names = utils.process_data(
         adata, cluster_cell_ls, cell_cluster_arr,args)
+# --------------------------------------------------------------------------------------------------- #
+
+
+
+
+
+
     
 gene_cell = new_data.X.toarray().T
 args.gene_num = gene_cell.shape[0]
@@ -221,6 +239,7 @@ use_autoencoder=False
 device = torch.device(f"cuda:{args.device_index}" if torch.cuda.is_available() else "cpu")
 print('device:', device)
 args.device = device
+
 
 def run_scanpy(adata):
     sp.pp.normalize_total(adata, target_sum=1e4)
