@@ -386,6 +386,8 @@ def build_cell_dict(gene_cell,predicted_cell_indexs,GAT_embeddings,graph_nx):
  # --------------------------------------------------------------------------------------------------- #
 
 
+# For @Hao
+# --------------------------------------------------------------------------------------------------- #
 # edge_index_selfloop is for what? 
 def identify_sengene_v1(sencell_dict, gene_cell, edge_index_selfloop, attention_scores, sen_gene_ls):
     print("identify_sengene_v1 ... ")
@@ -426,8 +428,12 @@ def identify_sengene_v1(sencell_dict, gene_cell, edge_index_selfloop, attention_
     # threshold = torch.mean(res1) + 2*torch.std(res1)  # Example threshold
     # print("the number of identified sen genes:", res1[res1>threshold].shape)
     return new_sen_gene_ls
+# --------------------------------------------------------------------------------------------------- #
 
 
+# For @Hao
+# --------------------------------------------------------------------------------------------------- #
+# explain this model as above standard
 def get_sorted_sengene(sencell_dict,gene_cell,edge_index_selfloop,attention_scores,sen_gene_ls):
     attention_scores=attention_scores.to('cpu')
     edge_index_selfloop=edge_index_selfloop.to('cpu')
@@ -456,9 +462,12 @@ def get_sorted_sengene(sencell_dict,gene_cell,edge_index_selfloop,attention_scor
     score_sengene_ls=torch.tensor(score_sengene_ls)
     sorted_sengene_ls=torch.tensor(sen_gene_ls)[torch.argsort(score_sengene_ls).tolist()]
     return sorted_sengene_ls
+# --------------------------------------------------------------------------------------------------- #
 
 
-
+# For @Hao
+# --------------------------------------------------------------------------------------------------- #
+# explain this model as above standard
 def calculate_outliers(scores):
     counts=0
     snc_index=[]
@@ -476,9 +485,12 @@ def calculate_outliers(scores):
     
     
     return counts,snc_index
+# --------------------------------------------------------------------------------------------------- #
 
 
-
+# For @Hao
+# --------------------------------------------------------------------------------------------------- #
+# explain this model as above standard
 def generate_ct_specific_scores(sen_gene_ls,gene_cell,edge_index_selfloop,
                                 attention_scores,graph_nx,celltype_names):
     print('generate_ct_specific_scores ...')
@@ -514,8 +526,11 @@ def generate_ct_specific_scores(sen_gene_ls,gene_cell,edge_index_selfloop,
             
     
     return ct_specific_scores
+# --------------------------------------------------------------------------------------------------- #
 
 
+# For @Hao
+# --------------------------------------------------------------------------------------------------- #
 def calculate_outliers_v1(scores_index):
     scores_index=np.array(scores_index)
     
@@ -541,8 +556,12 @@ def calculate_outliers_v1(scores_index):
     
     
     return counts,snc_index,outliers_ls
+# --------------------------------------------------------------------------------------------------- #
 
 
+# For @Hao
+# --------------------------------------------------------------------------------------------------- #
+# explain this model as above standard
 def extract_cell_indexs(ct_specific_scores):
     import numpy as np
     from scipy.special import softmax
@@ -569,7 +588,7 @@ def extract_cell_indexs(ct_specific_scores):
 
 
     return snc_indexs
-
+# --------------------------------------------------------------------------------------------------- #
 
 cellmodel = Sencell(args.emb_size).to(device)
 data=data.to(device)
@@ -643,6 +662,8 @@ for epoch in range(5):
     #     ratio_gene = utils.get_sengene_cover(old_sengene_indexs, sen_gene_ls)
     sen_gene_ls=identify_sengene_v1(
         sencell_dict,gene_cell,edge_index_selfloop,attention_scores,sen_gene_ls)
+
+
     ratio_gene = utils.get_sengene_cover(old_sengene_indexs, sen_gene_ls)
     
     torch.save([sencell_dict,sen_gene_ls,attention_scores,edge_index_selfloop],
