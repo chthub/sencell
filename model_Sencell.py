@@ -289,31 +289,6 @@ def cell_optim(cellmodel, optimizer, sencell_dict, nonsencell_dict,dgl_graph, ar
     return cellmodel, sencell_dict, nonsencell_dict
 
 
-def old_cell_optim(sencell_dict, nonsencell_dict, device, retrain=False):
-    cellmodel = Sencell().to(device)
-    optimizer = torch.optim.Adam(cellmodel.parameters(), lr=0.001,
-                                 weight_decay=1e-3)
-    # optimizer = torch.optim.RMSprop(cellmodel.parameters(), lr=0.1, alpha=0.5,
-    #                                 weight_decay=1e-4)
-    if retrain:
-        cellmodel.train()
-        for epoch in range(20):
-            optimizer.zero_grad()
-            # print(cellmodel.levels)
-            sencell_dict, nonsencell_dict = cellmodel(
-                sencell_dict, nonsencell_dict, device)
-            loss = cellmodel.loss(sencell_dict, nonsencell_dict)
-            print(loss.item())
-            loss.backward()
-            optimizer.step()
-
-        torch.save(cellmodel, './cellmodel1.pt')
-    else:
-        cellmodel = torch.load('./cellmodel1.pt')
-        cellmodel.eval()
-        sencell_dict, nonsencell_dict = cellmodel(
-            sencell_dict, nonsencell_dict, device)
-    return sencell_dict, nonsencell_dict
 
 
 def update_cell_embeddings(sampled_graph, sencell_dict, nonsencell_dict):
