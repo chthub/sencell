@@ -68,6 +68,7 @@ parser.add_argument('--subsampling', action='store_true', default=False, help='s
 
 
 # For @Hao
+# Hao: Just delete these 3 parameters.
 # --------------------------------------------------------------------------------------------------- #
 # is this sencell_num parameter not used? Please check this @Hao.
 parser.add_argument('--sencell_num', type=int, default=600, help='use default')
@@ -84,6 +85,7 @@ parser.add_argument('--cell_optim_epoch', type=int, default=50, help='use defaul
 
 
 # For @Hao
+# Hao: This is the emb size for GAT hidden embedding size
 # --------------------------------------------------------------------------------------------------- #
 # is this emb_size parameter for what, for GAT? is default 12? Please check this @Hao.
 parser.add_argument('--emb_size', type=int, default=12, help='use default')
@@ -105,9 +107,10 @@ if is_jupyter:
 
     
     # For @Hao
+    # Hao: For GAT
     # --------------------------------------------------------------------------------------------------- #
     # is this emb_size parameter for what, for GAT? is default 32 or 12? Please check this @Hao.
-    args.emb_size=32
+    args.emb_size=12
     args.timestamp=datestamp
     # --------------------------------------------------------------------------------------------------- #
 
@@ -179,6 +182,7 @@ logger.info("====== Part 1: load and process data ======")
 
 
 # For @Hao
+# the new_fix will load data1, add new line in the last part for use specific data path
 # --------------------------------------------------------------------------------------------------- #
 # Which one is for the final data 1, just leave one, please check this!!!
 # We only need one function that input our data, no need a lot of different functions!
@@ -205,6 +209,16 @@ else:
 
 
 # For @Hao
+# Hao: senescence_marker_list.csv is required in this function
+# new_data: processed adata
+# markers_index: the list of gene index
+# sen_gene_ls: list of senescent genes
+# nonsen_gene_ls: list of non senescent genes
+# gene_names: list of gene names
+# cluster_cell_ls: list of cell indexs in different clusters
+# cell_cluster_arr: list of cluster index of each cell
+# args: arguments
+# 
 # --------------------------------------------------------------------------------------------------- #
 # please confirm this code and provide interpretation for details, 
 # for example, 
@@ -351,6 +365,10 @@ logger.info("====== Part 4: Contrastive learning ======")
 
 
 # For @Hao
+# print cell type names of the predicted_cell_indexs
+# predicted_cell_indexs: list of cell indexs
+# graph_nx: graph object
+# celltype_names: list of cell type names
 # --------------------------------------------------------------------------------------------------- #
 # for each function, please write what the function do, describe parameters 
 # For example, what check_celltyps() do??? And every parameter is for what, `predicted_cell_indexs`, `graph_nx`, and `celltype_names` are for what???
@@ -366,6 +384,11 @@ def check_celltypes(predicted_cell_indexs, graph_nx, celltype_names):
 
 
 # For @Hao
+# build a dict to include cell information
+# gene_cell: gene cell matrix
+# predicted_cell_indexs: list of cell indexs
+# GAT_embeddings: embeddings from GAT
+# graph_nx: graph object
 # --------------------------------------------------------------------------------------------------- #
 # what is this function? explain it, what do it produce? 
 def build_cell_dict(gene_cell,predicted_cell_indexs,GAT_embeddings,graph_nx):
@@ -390,6 +413,12 @@ def build_cell_dict(gene_cell,predicted_cell_indexs,GAT_embeddings,graph_nx):
 
 
 # For @Hao
+# identify senescent genes
+# sencell_dict: dict of sncs
+# gene_cell: gene cell matrix
+# edge_index_selfloop: the edge index with selfloop
+# attention_scores: list of attention scores 
+# sen_gene_ls: list of sngs
 # --------------------------------------------------------------------------------------------------- #
 # edge_index_selfloop is for what? 
 def identify_sengene_v1(sencell_dict, gene_cell, edge_index_selfloop, attention_scores, sen_gene_ls):
@@ -435,6 +464,12 @@ def identify_sengene_v1(sencell_dict, gene_cell, edge_index_selfloop, attention_
 
 
 # For @Hao
+# Hao: generate sorted sngs list
+# sencell_dict: dict of sncs
+# gene_cell: gene cell matrix
+# edge_index_selfloop: the edge index with selfloop
+# attention_scores: list of attention scores 
+# sen_gene_ls: list of sngs
 # --------------------------------------------------------------------------------------------------- #
 # explain this model as above standard
 def get_sorted_sengene(sencell_dict,gene_cell,edge_index_selfloop,attention_scores,sen_gene_ls):
@@ -469,6 +504,8 @@ def get_sorted_sengene(sencell_dict,gene_cell,edge_index_selfloop,attention_scor
 
 
 # For @Hao
+# calculate outliers
+# scores: SnC socres of cells
 # --------------------------------------------------------------------------------------------------- #
 # explain this model as above standard
 def calculate_outliers(scores):
@@ -492,6 +529,13 @@ def calculate_outliers(scores):
 
 
 # For @Hao
+# Hao: generate cell type specific snc scores
+# graph_nx: graph object
+# gene_cell: gene cell matrix
+# edge_index_selfloop: the edge index with selfloop
+# attention_scores: list of attention scores 
+# sen_gene_ls: list of sngs
+# celltype_names: list of cell types
 # --------------------------------------------------------------------------------------------------- #
 # explain this model as above standard
 def generate_ct_specific_scores(sen_gene_ls,gene_cell,edge_index_selfloop,
@@ -563,6 +607,8 @@ def calculate_outliers_v1(scores_index):
 
 
 # For @Hao
+# Hao: get the cell indexs
+# ct_specific_scores: dict of cell type specific snc scores
 # --------------------------------------------------------------------------------------------------- #
 # explain this model as above standard
 def extract_cell_indexs(ct_specific_scores):
