@@ -52,16 +52,49 @@ parser.add_argument('--ccc', type=str, default='type1', help='type1: cell-cell e
 parser.add_argument('--gene_set', type=str, default='full', help='senmayo or fridman or cellage or goterm or goterm+fridman or senmayo+cellage or senmayo+fridman or senmayo+fridman+cellage or full')
 
 parser.add_argument('--gat_epoch', type=int, default=30, help='use default')
+
+
+# --------------------------------------------------------------------------------------------------- #
+# Write these code to fit our data input. This is for our @Yi, @Ahmed, and @Hu.
+parser.add_argument('--input_data_count', type=str, default="", help='it is a path to a adata object (.h5ad)')
+parser.add_argument('--input_data_CCC_file', type=str, default="", help='it is a path to a CCC file (.csv or .npy)')
+# --------------------------------------------------------------------------------------------------- #
+
+
+# --------------------------------------------------------------------------------------------------- #
+# Subsampling argument for our following version. Please check this @Yi, @Ahmed, and @Hu.
+parser.add_argument('--subsampling', action='store_true', default=False, help='subsampling')
+# --------------------------------------------------------------------------------------------------- #
+
+
+# For @Hao
+# --------------------------------------------------------------------------------------------------- #
+# is this sencell_num parameter not used? Please check this @Hao.
 parser.add_argument('--sencell_num', type=int, default=600, help='use default')
+# is this sengene_num parameter not used? Please check this @Hao.
 parser.add_argument('--sengene_num', type=int, default=200, help='use default')
+# is this sencell_epoch parameter not used? Please check this @Hao.
 parser.add_argument('--sencell_epoch', type=int, default=40, help='use default')
+# --------------------------------------------------------------------------------------------------- #
+
+
+
+
 parser.add_argument('--cell_optim_epoch', type=int, default=50, help='use default')
+
+
+# For @Hao
+# --------------------------------------------------------------------------------------------------- #
+# is this emb_size parameter for what, for GAT? is default 12? Please check this @Hao.
 parser.add_argument('--emb_size', type=int, default=12, help='use default')
+# --------------------------------------------------------------------------------------------------- #
+
+
 
 parser.add_argument('--batch_id', type=int, default=0, help='use default')
 
 if is_jupyter:
-    # jupyter 参数注入
+    # jupyter parameter injection
     args = parser.parse_args(args=[])
     args.exp_name = 'combined1'
     args.output_dir=f'/bmbl_data/chenghao/sencell/outputs/'
@@ -69,8 +102,15 @@ if is_jupyter:
     args.retrain = True
     args.gat_epoch=30
     args.sencell_num=600
+
+    
+    # For @Hao
+    # --------------------------------------------------------------------------------------------------- #
+    # is this emb_size parameter for what, for GAT? is default 32 or 12? Please check this @Hao.
     args.emb_size=32
     args.timestamp=datestamp
+    # --------------------------------------------------------------------------------------------------- #
+
     
     args.seed=40
     args.n_genes='full'
@@ -133,8 +173,15 @@ logging.getLogger().setLevel(logging.INFO)
 logger = logging.getLogger()
 
 # Part 1: load and process data
-# cell_cluster_arr在画umap的时候用
+# cell_cluster_arr is used when get umap embedding
 logger.info("====== Part 1: load and process data ======")
+
+
+
+# For @Hao
+# --------------------------------------------------------------------------------------------------- #
+# Which one is for the final data 1, just leave one, please check this!!!
+# We only need one function that input our data, no need a lot of different functions!
 if 'combined1' in args.exp_name:
     adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data_combined1()
 elif 'combined2' in args.exp_name:
@@ -143,6 +190,7 @@ elif 'combined3' in args.exp_name:
     adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data_combined3()
 elif 'newfix' in args.exp_name:
     adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data_newfix()
+# --------------------------------------------------------------------------------------------------- #
 elif 'data2' in args.exp_name:
     adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data2()
     
