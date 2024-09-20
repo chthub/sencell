@@ -259,31 +259,32 @@ if use_autoencoder:
             args.output_dir, f'{args.exp_name}_gene.emb'))
         torch.save(cell_embed, os.path.join(
             args.output_dir, f'{args.exp_name}_cell.emb'))
+        graph_nx = utils.add_nx_embedding(graph_nx, gene_embed, cell_embed)
+        graph_pyg = utils.build_graph_pyg(gene_cell, gene_embed, cell_embed,edge_indexs)
+        torch.save(graph_nx, os.path.join(args.output_dir, f'{args.exp_name}_graphnx.data'))
+        torch.save(graph_pyg, os.path.join(args.output_dir, f'{args.exp_name}_graphpyg.data'))
     else:
         print('skip training!')
         gene_embed = torch.load(os.path.join(
             args.output_dir, f'{args.exp_name}_gene.emb'))
         cell_embed = torch.load(os.path.join(
             args.output_dir, f'{args.exp_name}_cell.emb'))
-
-    if args.retrain:
-        graph_nx = utils.add_nx_embedding(graph_nx, gene_embed, cell_embed)
-        graph_pyg = utils.build_graph_pyg(gene_cell, gene_embed, cell_embed,edge_indexs)
-        torch.save(graph_nx, os.path.join(args.output_dir, f'{args.exp_name}_graphnx.data'))
-        torch.save(graph_pyg, os.path.join(args.output_dir, f'{args.exp_name}_graphpyg.data'))
-
-    else:
         graph_nx = torch.load(os.path.join(args.output_dir, f'{args.exp_name}_graphnx.data'))
         graph_pyg = utils.build_graph_pyg(gene_cell, gene_embed, cell_embed)
         
+        
 else:
     if args.retrain:
+    # For users
+    # --------------------------------------------------------------------------------------------------- #
         cell_embed=run_scanpy(new_data.copy())
         print('cell embedding generated!')
         gene_embed=run_scanpy(new_data.copy().T)
         print('gene embedding generated!')
         cell_embed=torch.tensor(cell_embed)
         gene_embed=torch.tensor(gene_embed)
+    # this is used to umap embeding
+    # --------------------------------------------------------------------------------------------------- #
         
         graph_nx = utils.add_nx_embedding(graph_nx, gene_embed, cell_embed)
         graph_pyg = utils.build_graph_pyg(gene_cell, gene_embed, cell_embed,edge_indexs,ccc_matrix)
@@ -332,22 +333,38 @@ else:
     model=torch.load(GAT_path)
     model=model.to(device)
     
-torch.cuda.empty_cache() 
+torch.cuda.empty_cache()
+
+logger.info("Part 3, train GAT end!")
 
 
-logger.info("Part 2, train GAT end!")
+
+
+
+
+
 
 logger.info("====== Part 4: Contrastive learning ======")
 
-def check_celltypes(predicted_cell_indexs,graph_nx,celltype_names):
+
+# For @Hao
+# --------------------------------------------------------------------------------------------------- #
+# for each function, please write what the function do, describe parameters 
+# For example, what check_celltyps() do??? And every parameter is for what, `predicted_cell_indexs`, `graph_nx`, and `celltype_names` are for what???
+def check_celltypes(predicted_cell_indexs, graph_nx, celltype_names):
     cell_types=[]
     for i in predicted_cell_indexs:
         cluster=graph_nx.nodes[int(i)]['cluster']
         cell_types.append(celltype_names[cluster])
     from collections import Counter
     print("snc in different cell types: ",Counter(cell_types))
-    
+ # --------------------------------------------------------------------------------------------------- #
 
+
+
+# For @Hao
+# --------------------------------------------------------------------------------------------------- #
+# what is this function? explain it, what do it produce? 
 def build_cell_dict(gene_cell,predicted_cell_indexs,GAT_embeddings,graph_nx):
     sencell_dict={}
     nonsencell_dict={}
@@ -366,9 +383,10 @@ def build_cell_dict(gene_cell,predicted_cell_indexs,GAT_embeddings,graph_nx):
                 0,
                 i]
     return sencell_dict,nonsencell_dict
+ # --------------------------------------------------------------------------------------------------- #
 
 
-        
+# edge_index_selfloop is for what? 
 def identify_sengene_v1(sencell_dict, gene_cell, edge_index_selfloop, attention_scores, sen_gene_ls):
     print("identify_sengene_v1 ... ")
     cell_index = torch.tensor(list(sencell_dict.keys()))
