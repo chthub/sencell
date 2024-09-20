@@ -193,6 +193,9 @@ elif 'newfix' in args.exp_name:
 # --------------------------------------------------------------------------------------------------- #
 elif 'data2' in args.exp_name:
     adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data2()
+else:
+        adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data_newfix(args.input_data_count)
+
     
 # plots.umapPlot(adata.obsm['X_umap'],clusters=cell_cluster_arr,labels=celltype_names)
 
