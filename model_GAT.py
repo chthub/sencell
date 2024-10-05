@@ -10,7 +10,7 @@ from torch_geometric.nn.models import InnerProductDecoder, GAE, VGAE
 from torch_geometric.nn import GATConv, GAE
 
 
-from sampling import sub_sampling_GAT
+# from sampling import sub_sampling_GAT
 from tqdm import tqdm
 
 import os
@@ -118,46 +118,46 @@ class SenGAE(GAE):
         return z
 
 
-def sampling_jobs_seq(graph_nx, graph, args):
-    # 采样串行
-    t0 = time.time()
-    num_subgraphs = 50
-    jobs = []
-    print("Start sampling ...")
-    if args.is_jupyter:
-        for _ in tqdm(range(num_subgraphs)):
-            sampled_graph = sub_sampling_GAT(
-                graph_nx, graph, gene_num=args.gene_num, cell_num=args.cell_num)
-            jobs.append(sampled_graph)
-    else:
-        for _ in range(num_subgraphs):
-            sampled_graph = sub_sampling_GAT(
-                graph_nx, graph, gene_num=args.gene_num, cell_num=args.cell_num)
-            jobs.append(sampled_graph)
-    print('sampling end, time: ', time.time()-t0)
-    return jobs
+# def sampling_jobs_seq(graph_nx, graph, args):
+#     # 采样串行
+#     t0 = time.time()
+#     num_subgraphs = 50
+#     jobs = []
+#     print("Start sampling ...")
+#     if args.is_jupyter:
+#         for _ in tqdm(range(num_subgraphs)):
+#             sampled_graph = sub_sampling_GAT(
+#                 graph_nx, graph, gene_num=args.gene_num, cell_num=args.cell_num)
+#             jobs.append(sampled_graph)
+#     else:
+#         for _ in range(num_subgraphs):
+#             sampled_graph = sub_sampling_GAT(
+#                 graph_nx, graph, gene_num=args.gene_num, cell_num=args.cell_num)
+#             jobs.append(sampled_graph)
+#     print('sampling end, time: ', time.time()-t0)
+#     return jobs
 
 
-def sampling_jobs_par(graph_nx, graph, args):
-    from multiprocessing import Pool
-    # 采样并行，多进程版
-    # 并行版本报错，未解决
-    t0 = time.time()
-    num_subgraphs = 50
-    jobs = []
-    print("Start sampling ...")
-    p = Pool()
-    graph = graph.to('cpu')
-    for _ in tqdm(range(num_subgraphs)):
-        jobs.append(p.apply_async(sub_sampling_GAT, args=(
-            graph_nx, graph, args.gene_num, args.cell_num,)))
-    print('Waiting for all subprocesses done...')
-    p.close()
-    p.join()
-    jobs = [i.get() for i in jobs]
-    print('sampling end, time: ', time.time()-t0)
+# def sampling_jobs_par(graph_nx, graph, args):
+#     from multiprocessing import Pool
+#     # 采样并行，多进程版
+#     # 并行版本报错，未解决
+#     t0 = time.time()
+#     num_subgraphs = 50
+#     jobs = []
+#     print("Start sampling ...")
+#     p = Pool()
+#     graph = graph.to('cpu')
+#     for _ in tqdm(range(num_subgraphs)):
+#         jobs.append(p.apply_async(sub_sampling_GAT, args=(
+#             graph_nx, graph, args.gene_num, args.cell_num,)))
+#     print('Waiting for all subprocesses done...')
+#     p.close()
+#     p.join()
+#     jobs = [i.get() for i in jobs]
+#     print('sampling end, time: ', time.time()-t0)
 
-    return jobs
+#     return jobs
 
 
 def train_GAT(graph_nx, graph, args, retrain=False, resampling=False,wandb=None):

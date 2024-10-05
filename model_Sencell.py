@@ -5,7 +5,7 @@ from collections import defaultdict
 import numpy as np
 import torch
 import torch.utils.data as Data
-from linetimer import CodeTimer
+# from linetimer import CodeTimer
 from torch import nn, optim
 from torch.nn import Dropout, Linear, ReLU
 from torch.nn import functional as F

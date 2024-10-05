@@ -7,7 +7,7 @@ from torch_geometric.data import Data as Graphdata
 from torch_geometric.utils import to_undirected
 import networkx as nx
 from tabulate import tabulate
-import dgl
+# import dgl
 import scipy
 from scipy import sparse as scsp
 
@@ -399,9 +399,10 @@ def combine_genes(adata, markers_ls, args):
         markers_index.append(indexs)
     # 得到markers_index，包含4个list，是marker在genes里面的index
     # 所有marker的index
-    sen_gene_ls = [gene_names.index(i) for i in sen_gene_ls]
+    sen_gene_ls_idx = [gene_names.index(i) for i in sen_gene_ls]
+    pd.DataFrame({'gene_idx': sen_gene_ls_idx, 'gene_name': sen_gene_ls}).to_csv("initial_sene_markers.csv", index=False)
     nonsen_gene_ls = [gene_names.index(i) for i in filtered_highly_genes]
-    return new_data, markers_index, sen_gene_ls, nonsen_gene_ls, gene_names
+    return new_data, markers_index, sen_gene_ls_idx, nonsen_gene_ls, gene_names
 
 
 def process_data(adata, cluster_cell_ls, cell_cluster_arr,args):
@@ -597,44 +598,44 @@ def convert_to_adj_v2(ccc_matrix, t=0.8):
     
 
 
-def positional_encoding(g, pos_enc_dim=32):
-    """
-        Graph positional encoding v/ Laplacian eigenvectors
-    """
-    print("Caculate pos encoding ...")
-    adjacency_matrix = g.adjacency_matrix().to_dense()
-    # convert to scipy sparse matrix
-    A = scsp.csr_matrix(adjacency_matrix.numpy())
-    N = scsp.diags(dgl.backend.asnumpy(g.in_degrees()).clip(1) ** -0.5, dtype=float)
-    L = scsp.eye(g.number_of_nodes()) - N * A * N
+# def positional_encoding(g, pos_enc_dim=32):
+#     """
+#         Graph positional encoding v/ Laplacian eigenvectors
+#     """
+#     print("Caculate pos encoding ...")
+#     adjacency_matrix = g.adjacency_matrix().to_dense()
+#     # convert to scipy sparse matrix
+#     A = scsp.csr_matrix(adjacency_matrix.numpy())
+#     N = scsp.diags(dgl.backend.asnumpy(g.in_degrees()).clip(1) ** -0.5, dtype=float)
+#     L = scsp.eye(g.number_of_nodes()) - N * A * N
 
-    # Eigenvectors with numpy
-    EigVal, EigVec = np.linalg.eig(L.toarray())
-    idx = EigVal.argsort() # increasing order
-    EigVal, EigVec = EigVal[idx], np.real(EigVec[:,idx])
-    g.ndata['pos_enc'] = torch.from_numpy(EigVec[:,1:pos_enc_dim+1]).float() 
+#     # Eigenvectors with numpy
+#     EigVal, EigVec = np.linalg.eig(L.toarray())
+#     idx = EigVal.argsort() # increasing order
+#     EigVal, EigVec = EigVal[idx], np.real(EigVec[:,idx])
+#     g.ndata['pos_enc'] = torch.from_numpy(EigVec[:,1:pos_enc_dim+1]).float() 
     
-    return g
+#     return g
 
 
 import scipy.sparse.linalg as lg
 
-def positional_encoding_v1(g, pos_enc_dim=32):
-    """
-        Graph positional encoding v/ Laplacian eigenvectors
-    """
-    print("Calculate pos encoding ...")
-    adjacency_matrix = g.adjacency_matrix().to_dense()
-    # Convert to scipy sparse matrix
-    A = scsp.csr_matrix(adjacency_matrix.numpy())
-    N = scsp.diags(dgl.backend.asnumpy(g.in_degrees()).clip(1) ** -0.5, dtype=float)
-    L = scsp.eye(g.number_of_nodes()) - N * A * N
+# def positional_encoding_v1(g, pos_enc_dim=32):
+#     """
+#         Graph positional encoding v/ Laplacian eigenvectors
+#     """
+#     print("Calculate pos encoding ...")
+#     adjacency_matrix = g.adjacency_matrix().to_dense()
+#     # Convert to scipy sparse matrix
+#     A = scsp.csr_matrix(adjacency_matrix.numpy())
+#     N = scsp.diags(dgl.backend.asnumpy(g.in_degrees()).clip(1) ** -0.5, dtype=float)
+#     L = scsp.eye(g.number_of_nodes()) - N * A * N
 
-    # Eigenvectors with scipy for sparse matrices
-    EigVal, EigVec = lg.eigsh(L, k=pos_enc_dim+1, which='SM')  # smallest eigenvalues
-    g.ndata['pos_enc'] = torch.from_numpy(EigVec[:,1:]).float() 
+#     # Eigenvectors with scipy for sparse matrices
+#     EigVal, EigVec = lg.eigsh(L, k=pos_enc_dim+1, which='SM')  # smallest eigenvalues
+#     g.ndata['pos_enc'] = torch.from_numpy(EigVec[:,1:]).float() 
     
-    return g
+#     return g
 
 
 def build_ccc_graph(gene_cell,gene_names):
@@ -645,25 +646,25 @@ def build_ccc_graph(gene_cell,gene_names):
     return adj_matrix,ccc_matrix
 
 
-def update_dglgraph(cellmodel,embs,dgl_graph,args):
-    cell_embs=embs[args.gene_num:]
-    pos_embs=[]
-    for i in range(args.cell_num):
-        pos_embs.append(dgl_graph.nodes[i].data['pos_enc'].reshape(1,-1))
+# def update_dglgraph(cellmodel,embs,dgl_graph,args):
+#     cell_embs=embs[args.gene_num:]
+#     pos_embs=[]
+#     for i in range(args.cell_num):
+#         pos_embs.append(dgl_graph.nodes[i].data['pos_enc'].reshape(1,-1))
 
-    pos_embs=torch.cat(pos_embs)
-    new_emb=torch.cat([cell_embs,pos_embs],axis=1)
-    result_emb=cellmodel.get_embeddings(new_emb,args.device).detach().cpu().numpy()
+#     pos_embs=torch.cat(pos_embs)
+#     new_emb=torch.cat([cell_embs,pos_embs],axis=1)
+#     result_emb=cellmodel.get_embeddings(new_emb,args.device).detach().cpu().numpy()
 
-    adj_matrix=convert_to_adj_v2(result_emb,t=0.4)
+#     adj_matrix=convert_to_adj_v2(result_emb,t=0.4)
     
-    index1, index2 = np.nonzero(adj_matrix)
-    print('the number of edges:', len(index1))
+#     index1, index2 = np.nonzero(adj_matrix)
+#     print('the number of edges:', len(index1))
 
-    dgl_graph = dgl.graph((index1, index2),num_nodes=args.cell_num)
+#     dgl_graph = dgl.graph((index1, index2),num_nodes=args.cell_num)
     
-    dgl_graph=positional_encoding(dgl_graph)
-    return dgl_graph,adj_matrix
+#     dgl_graph=positional_encoding(dgl_graph)
+#     return dgl_graph,adj_matrix
 
 
 def get_sencell_cover(old_sencell_dict, sencell_dict):
@@ -711,26 +712,26 @@ def load_objs(path):
         return pickle.load(f)
     
     
-def caculate_GSEA(adata,args,use_onemarker=False,one_marker=None):
-    # p16: CDKN2A, use_onemarker= True, one_marker="CDKN2A"
-    # p21: CDKN1A
-    import pandas as pd
-    import gseapy as gp
+# def caculate_GSEA(adata,args,use_onemarker=False,one_marker=None):
+#     # p16: CDKN2A, use_onemarker= True, one_marker="CDKN2A"
+#     # p21: CDKN1A
+#     import pandas as pd
+#     import gseapy as gp
     
-    gene_expression_df = pd.DataFrame(adata.X.T, index=adata.var.index, columns=adata.obs.index)
-    if use_onemarker:
-        all_marker_genes=[one_marker]
-    else:
-        all_marker_genes=load_markers(args)
-        all_marker_genes=list(set([j for i in all_marker_genes for j in i]))
+#     gene_expression_df = pd.DataFrame(adata.X.T, index=adata.var.index, columns=adata.obs.index)
+#     if use_onemarker:
+#         all_marker_genes=[one_marker]
+#     else:
+#         all_marker_genes=load_markers(args)
+#         all_marker_genes=list(set([j for i in all_marker_genes for j in i]))
 
-    # Prepare gene sets as a dictionary
-    gene_sets = {'GeneSet1': all_marker_genes}
+#     # Prepare gene sets as a dictionary
+#     gene_sets = {'GeneSet1': all_marker_genes}
 
-    # Run ssGSEA
-    ssgsea_results = gp.ssgsea(data=gene_expression_df, gene_sets=gene_sets, sample_norm_method='rank', outdir=None)
+#     # Run ssGSEA
+#     ssgsea_results = gp.ssgsea(data=gene_expression_df, gene_sets=gene_sets, sample_norm_method='rank', outdir=None)
 
-    # Extract enrichment scores
-    enrichment_scores = ssgsea_results.res2d
+#     # Extract enrichment scores
+#     enrichment_scores = ssgsea_results.res2d
 
-    return enrichment_scores
+#     return enrichment_scores

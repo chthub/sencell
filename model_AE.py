@@ -3,7 +3,7 @@ from torch import nn, optim
 from torch.nn import functional as F
 import torch.utils.data as Data
 import numpy as np
-
+from tqdm import tqdm
 
 class AE(nn.Module):
     def __init__(self, dim, emb_dim=128):
