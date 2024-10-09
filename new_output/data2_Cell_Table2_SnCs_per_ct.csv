@@ -1,25 +1,25 @@
-Cell type,Number of cells,Number of SnCs
-Alveolar fibroblasts,2833,49
-AT2,1678,109
-CD4 T cells,1100,97
-Monocyte-derived Mph,904,113
-EC general capillary,890,31
-CD8 T cells,698,26
-Classical monocytes,673,19
-Alveolar macrophages,632,58
-Pericytes,536,16
-Plasma cells,487,26
-Peribronchial fibroblasts,465,17
+cell_type,number_of_cells,number_of_SnCs
+Alveolar fibroblasts,2833,65
+AT2,1678,114
+CD4 T cells,1100,98
+Monocyte-derived Mph,904,117
+EC general capillary,890,30
+CD8 T cells,698,27
+Classical monocytes,673,22
+Alveolar macrophages,632,59
+Pericytes,536,24
+Plasma cells,487,25
+Peribronchial fibroblasts,465,20
 Interstitial Mph perivascular,450,0
-EC aerocyte capillary,413,11
+EC aerocyte capillary,413,12
 AT1,357,24
 NK cells,312,0
 Adventitial fibroblasts,299,0
 Smooth muscle,270,0
 EC arterial,239,0
 Multiciliated (non-nasal),237,0
-Myofibroblasts,211,11
-Mast cells,199,13
+Myofibroblasts,211,14
+Mast cells,199,10
 EC venous pulmonary,190,0
 Non-classical monocytes,175,0
 B cells,150,12

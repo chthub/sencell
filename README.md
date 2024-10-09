@@ -79,3 +79,32 @@ Run data2
 ``` bash
 pdm run python main4.py --retrain --exp_name data2 --input_data_count /bmbl_data/huchen/deepSAS_data/deepSAS_data2.h5ad
 ```
+
+**Cell Tables**
+* Cell Table 1:
+   * `cell_id`: numerical cell id.
+   * `cell_name`: chracter cell id.
+   * `ifSnCs`: Boolean indicating if the cell is predicted to be a SnC.
+   * `SnC_scores`: Numeric value representing the SnC score, calculated from attention score, the same as main4.py.
+* Cell Table 2:
+   * `cell_type`: annoated cell types.
+   * `number_of_cells`: total number of cells for each cell type.
+   * `number_of_SnCs`: number of SnCs in each cell type.
+
+**Gene Tables**
+* Gene Table 1:
+   * `rows`: name of genes.
+   * `columns`: all the cell types.
+   * `value`: SnG scores for each cell type, calcuated from attention score, modified from main4.py, but separate each cell type (not all SnCs).
+* Gene Table 2:
+   * gene_name: Name of the gene.
+   * cell_type: all the cell types.
+   * SnG_scores: SnG_scores for the gene in one cell type (from Gene Table 1).
+   * p_val: p value from DEG table compared between SnC ands non-SnCs for each cell type.
+   * logFC: log2FoldChange from DEG table compared between SnC ands non-SnCs for each cell type.
+   * p_val_adj:p adjusted value from DEG table compared between SnC ands non-SnCs for each cell type.
+* Gene Table 3 (cell type unique genes):
+   * gene_name: name of genes.
+   * cell_type: alll the cell types.
+* DEG Table: DEG comparing SnCs and non-SnCs for each cell type, used for Gene Table 2 generation.
+
