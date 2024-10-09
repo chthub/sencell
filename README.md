@@ -27,7 +27,7 @@ Ensure you have Python 3.8 or later installed. This project is developed and tes
 1. **Clone the Repository**:
    ```bash
    git clone https://github.com/chthub/sencell.git
-   ##to get Hu brach only please run git clone -b 'Hu' --single-branch https://github.com/chthub/sencell.git
+   ##to get Hu's branch only please run git clone -b 'Hu' --single-branch https://github.com/chthub/sencell.git
    cd sencell/
    ```
 
