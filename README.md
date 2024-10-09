@@ -73,3 +73,9 @@ python main3.py --exp_name "Experiment_On_Disease" --output_dir ./outputs --devi
 - **model_AE.py**, **model_GAT.py**, **model_Sencell.py**: Include model definitions and training procedures for autoencoders, Graph Attention Networks, and senescent cell identification models.
 - **sampling.py**: Implements methods for sampling subgraphs and managing dataset variations.
 - **main.py**: The main executable script orchestrating data loading, model training, and evaluation processes.
+
+
+Run data2
+``` bash
+pdm run python main4.py --retrain --exp_name data2 --input_data_count /bmbl_data/huchen/deepSAS_data/deepSAS_data2.h5ad
+```

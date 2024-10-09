@@ -76,12 +76,13 @@ parser.add_argument('--sencell_num', type=int, default=600, help='use default')
 # is this sengene_num parameter not used? Please check this @Hao.
 parser.add_argument('--sengene_num', type=int, default=200, help='use default')
 # is this sencell_epoch parameter not used? Please check this @Hao.
+# NOTE: Not use
 parser.add_argument('--sencell_epoch', type=int, default=40, help='use default')
 # --------------------------------------------------------------------------------------------------- #
 
 
 
-
+# NOTE: Yi, epoch 1
 parser.add_argument('--cell_optim_epoch', type=int, default=50, help='use default')
 
 
@@ -448,7 +449,6 @@ def identify_sengene_v1(sencell_dict, gene_cell, edge_index_selfloop, attention_
     selected_edges_targets = edge_index_selfloop[1][edges_selected_indices]
     selected_attention_scores = attention_scores[edges_selected_indices].squeeze()
 
-
     # Compute per-gene sums and counts using torch_scatter
     # Counts: Number of times each gene appears in masked_genes
     counts = torch_scatter.scatter(torch.ones_like(selected_attention_scores), selected_edges_targets,
@@ -468,6 +468,9 @@ def identify_sengene_v1(sencell_dict, gene_cell, edge_index_selfloop, attention_
 
     # Number of genes to update
     # NOTE: select top 10 genes
+    # BUGFIX: 1. top 10 genes
+    # 2. final parameters
+    # 3. abormal genes (28)
     num = 10
 
     # Get top 'num' new genes with highest scores
@@ -643,36 +646,36 @@ def generate_ct_specific_scores(sen_gene_ls,gene_cell,edge_index_selfloop,
             ct_specific_scores[cluster] = [score_entry]
     
 
-    print('generate_ct_specific_scores ...')
+    # print('generate_ct_specific_scores ...')
     # attention_scores=attention_scores.to('cpu')
     # edge_index_selfloop=edge_index_selfloop.to('cpu')
     
-    gene_index=torch.tensor(sen_gene_ls)
+    # gene_index=torch.tensor(sen_gene_ls)
 
-    gene_mask = torch.zeros(gene_cell.shape[0]+gene_cell.shape[1], dtype=torch.bool)
-    gene_mask[gene_index] = True
+    # gene_mask = torch.zeros(gene_cell.shape[0]+gene_cell.shape[1], dtype=torch.bool)
+    # gene_mask[gene_index] = True
 
     # res=[]
     
-    # key is cluster index, value is a 2d list, each row: [score, cell index]
-    ct_specific_scores={}
+    # # key is cluster index, value is a 2d list, each row: [score, cell index]
+    # ct_specific_scores={}
 
-    for cell_index in range(gene_cell.shape[0],gene_cell.shape[0]+gene_cell.shape[1]):
-        connected_genes=edge_index_selfloop[0][edge_index_selfloop[1] == cell_index]
-        # 这里要考虑到如果cell没有任何老化基因表达，score设为0，pytorch会将其计算为nan，需要额外处理
-        if len(connected_genes[gene_mask[connected_genes]])==0:
-            print('no sengene in this cell!')
-            # res.append(torch.tensor(0))
-        else:
-            attention_edge=torch.sum(attention_scores[edge_index_selfloop[1] == cell_index][gene_mask[connected_genes]],axis=1)
-            attention_s=torch.mean(attention_edge)
-            # res.append(attention_s)
+    # for cell_index in range(gene_cell.shape[0],gene_cell.shape[0]+gene_cell.shape[1]):
+    #     connected_genes=edge_index_selfloop[0][edge_index_selfloop[1] == cell_index]
+    #     # 这里要考虑到如果cell没有任何老化基因表达，score设为0，pytorch会将其计算为nan，需要额外处理
+    #     if len(connected_genes[gene_mask[connected_genes]])==0:
+    #         print('no sengene in this cell!')
+    #         res.append(torch.tensor(0))
+    #     else:
+    #         attention_edge=torch.sum(attention_scores[edge_index_selfloop[1] == cell_index][gene_mask[connected_genes]],axis=1)
+    #         attention_s=torch.mean(attention_edge)
+    #         # res.append(attention_s)
             
-            cluster=graph_nx.nodes[int(cell_index)]['cluster']
-            if cluster in ct_specific_scores:
-                ct_specific_scores[cluster].append([float(attention_s),int(cell_index)])
-            else:
-                ct_specific_scores[cluster]=[[float(attention_s),int(cell_index)]]
+    #         cluster=graph_nx.nodes[int(cell_index)]['cluster']
+    #         if cluster in ct_specific_scores:
+    #             ct_specific_scores[cluster].append([float(attention_s),int(cell_index)])
+    #         else:
+    #             ct_specific_scores[cluster]=[[float(attention_s),int(cell_index)]]
             
     
     return ct_specific_scores
