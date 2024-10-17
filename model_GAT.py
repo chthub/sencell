@@ -38,9 +38,10 @@ class GAEModel(GAE):
 
     def get_attention_scores(self, data):
         x, edge_index = data.x, data.edge_index
-        # Pass data through the first GAT layer to get attention scores
+        # NOTE: Pass data through the first GAT layer to get attention scores
         _, (edge_index_selfloop, alpha) = self.encoder.conv1(x, edge_index, return_attention_weights=True)
         # matrix shape: number of edges x number of heads
+        # Decimal point digit truncation, 10^6
         return edge_index_selfloop,alpha
     
 

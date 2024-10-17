@@ -26,7 +26,7 @@ import random
 import datetime
 import scanpy as sp
 
-
+print(f"Start time: {datetime.datetime.now()}")
 # import os
 
 # os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:19456"
@@ -43,7 +43,7 @@ parser = argparse.ArgumentParser(description='Main program for sencells')
 
 parser.add_argument('--output_dir', type=str, default='./outputs', help='')
 parser.add_argument('--exp_name', type=str, default='data1', help='')
-parser.add_argument('--device_index', type=int, default=0, help='')
+parser.add_argument('--device_index', type=int, default=6, help='')
 parser.add_argument('--retrain', action='store_true', default=False, help='')
 parser.add_argument('--timestamp', type=str,  default="", help='use default')
 
@@ -79,7 +79,9 @@ parser.add_argument('--sengene_num', type=int, default=200, help='use default')
 # NOTE: Not use
 parser.add_argument('--sencell_epoch', type=int, default=40, help='use default')
 # --------------------------------------------------------------------------------------------------- #
-
+# For reproduce
+parser.add_argument('--surfix', type=str, default='base_decimal.data')
+parser.add_argument('--AE_surfix', type=str, default='base_decimal.pt')
 
 
 # NOTE: Yi, epoch 1
@@ -245,7 +247,8 @@ args.cell_num = gene_cell.shape[1]
 
 print(f'cell num: {new_data.shape[0]}, gene num: {new_data.shape[1]}')
 
-if args.retrain:
+# if args.retrain:
+if not os.path.exists(os.path.join(args.output_dir, f'{args.exp_name}_graphnx.data')):
     graph_nx,edge_indexs,ccc_matrix = utils.build_graph_nx(
         new_data,gene_cell, cell_cluster_arr, sen_gene_ls, nonsen_gene_ls, gene_names,args)
 
@@ -258,6 +261,7 @@ logger.info("====== Part 2: generate init embedding ======")
 use_autoencoder=False
 
 device = torch.device(f"cuda:{args.device_index}" if torch.cuda.is_available() else "cpu")
+# device = "cpu"
 print('device:', device)
 args.device = device
 
@@ -295,26 +299,27 @@ if use_autoencoder:
  # NOTE: UMAP embedding as cell/gene embeeding       
 else:
     # if args.retrain:
-    # # For users
-    # # --------------------------------------------------------------------------------------------------- #
-    #     cell_embed=run_scanpy(new_data.copy())
-    #     print('cell embedding generated!')
-    #     gene_embed=run_scanpy(new_data.copy().T)
-    #     print('gene embedding generated!')
-    #     cell_embed=torch.tensor(cell_embed)
-    #     gene_embed=torch.tensor(gene_embed)
-    # # this is used to umap embeding
-    # # --------------------------------------------------------------------------------------------------- #
+    if not os.path.exists(os.path.join(args.output_dir, f'{args.exp_name}_graphnx.data')):
+    # For users
+    # --------------------------------------------------------------------------------------------------- #
+        cell_embed=run_scanpy(new_data.copy())
+        print('cell embedding generated!')
+        gene_embed=run_scanpy(new_data.copy().T)
+        print('gene embedding generated!')
+        cell_embed=torch.tensor(cell_embed)
+        gene_embed=torch.tensor(gene_embed)
+    # this is used to umap embeding
+    # --------------------------------------------------------------------------------------------------- #
         
-    #     graph_nx = utils.add_nx_embedding(graph_nx, gene_embed, cell_embed)
-    #     graph_pyg = utils.build_graph_pyg(gene_cell, gene_embed, cell_embed,edge_indexs,ccc_matrix)
-    #     torch.save(graph_nx, os.path.join(args.output_dir, f'{args.exp_name}_graphnx.data'))
-    #     torch.save(graph_pyg, os.path.join(args.output_dir, f'{args.exp_name}_graphpyg.data'))
-    #     print('graph nx and pyg saved!')
-    # else:
-    print('Load graph nx and pyg ...')
-    graph_nx=torch.load(os.path.join(args.output_dir, f'{args.exp_name}_graphnx.data'))
-    graph_pyg=torch.load(os.path.join(args.output_dir, f'{args.exp_name}_graphpyg.data'))
+        graph_nx = utils.add_nx_embedding(graph_nx, gene_embed, cell_embed)
+        graph_pyg = utils.build_graph_pyg(gene_cell, gene_embed, cell_embed,edge_indexs,ccc_matrix)
+        torch.save(graph_nx, os.path.join(args.output_dir, f'{args.exp_name}_graphnx.data'))
+        torch.save(graph_pyg, os.path.join(args.output_dir, f'{args.exp_name}_graphpyg.data'))
+        print('graph nx and pyg saved!')
+    else:
+        print('Load graph nx and pyg ...')
+        graph_nx=torch.load(os.path.join(args.output_dir, f'{args.exp_name}_graphnx.data'))
+        graph_pyg=torch.load(os.path.join(args.output_dir, f'{args.exp_name}_graphpyg.data'))
 
 logger.info("Part 2, AE end!")
 logger.info("====== Part 3: GAT training ======")
@@ -323,35 +328,36 @@ data = graph_pyg
 data=data.to(device)
 torch.cuda.empty_cache() 
 
-
+np.random.seed(seed)
+torch.manual_seed(seed)
+GAT_path=os.path.join(args.output_dir, f'{args.exp_name}_GAT{args.AE_surfix}')
 # if args.retrain:
-#     # Initialize model and optimizer
-#     model = GAEModel(args.emb_size, args.emb_size).to(device)
-#     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    
-#     # Training loop
-#     def train():
-#         model.train()
-#         optimizer.zero_grad()
-#         z = model.encode(data.x, data.edge_index)
-#         loss = model.recon_loss(z, data.edge_index)
-#         loss.backward()
-#         optimizer.step()
-#         return loss.item()
-    
-#     # Training the model
-#     for epoch in range(args.gat_epoch):
-#         loss = train()
-#         print(f'Epoch {epoch:03d}, Loss: {loss:.4f}')
+if not os.path.exists(GAT_path):
+    # Initialize model and optimizer
+    model = GAEModel(args.emb_size, args.emb_size).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-#     GAT_path=os.path.join(args.output_dir, f'{args.exp_name}_GAT.pt')
-#     torch.save(model, GAT_path)
-#     print(f'GAT model saved! {GAT_path}')
-# else:
-GAT_path=os.path.join(args.output_dir, f'{args.exp_name}_GAT.pt')
-print(f'Load GAT from {GAT_path}')
-model=torch.load(GAT_path)
-model=model.to(device)
+    # Training loop
+    def train():
+        model.train()
+        optimizer.zero_grad()
+        z = model.encode(data.x, data.edge_index)
+        loss = model.recon_loss(z, data.edge_index)
+        loss.backward()
+        optimizer.step()
+        return loss.item()
+
+    # Training the model
+    for epoch in range(args.gat_epoch):
+        loss = train()
+        print(f'Epoch {epoch:03d}, Loss: {loss}')
+
+    torch.save(model, GAT_path)
+    print(f'GAT model saved! {GAT_path}')
+else:
+    print(f'Load GAT from {GAT_path}')
+    model=torch.load(GAT_path)
+    model=model.to(device)
     
 torch.cuda.empty_cache()
 
@@ -761,6 +767,7 @@ sencell_dict=None
 # Extracting attention scores
 edge_index_selfloop_cell,attention_scores_cell = model.get_attention_scores(data)
 attention_scores_cell=attention_scores_cell.cpu().detach()
+attention_scores_cell = torch.trunc(attention_scores_cell*10000)/ 10000
 edge_index_selfloop_cell=edge_index_selfloop_cell.cpu().detach()
 
 model.eval()
@@ -783,6 +790,7 @@ for epoch in range(5):
         old_sencell_dict=None
     
     GAT_embeddings=model.encode(data.x,data.edge_index).detach()
+    GAT_embeddings = torch.trunc(GAT_embeddings*10000)/ 10000
     sencell_dict, nonsencell_dict=build_cell_dict(gene_cell,predicted_cell_indexs,GAT_embeddings,graph_nx)
     
     if old_sencell_dict is not None:
@@ -809,9 +817,12 @@ for epoch in range(5):
         new_GAT_embeddings[key]=nonsencell_dict[key][2].detach()
         
     data.x=new_GAT_embeddings
+    # new embeeding input to GAT
     edge_index_selfloop,attention_scores = model.get_attention_scores(data)
     
     attention_scores=attention_scores.to('cpu')
+    attention_scores = torch.trunc(attention_scores*10000)/ 10000
+
     edge_index_selfloop=edge_index_selfloop.to('cpu')
     
     old_sengene_indexs=sen_gene_ls
@@ -825,5 +836,6 @@ for epoch in range(5):
     ratio_gene = utils.get_sengene_cover(old_sengene_indexs, sen_gene_ls)
     
     torch.save([sencell_dict,sen_gene_ls,attention_scores,edge_index_selfloop],
-               os.path.join(args.output_dir, f'{args.exp_name}_sencellgene-epoch{epoch}.data'))
+               os.path.join(args.output_dir, f'{args.exp_name}_sencellgene-epoch{epoch}{args.surfix}'))
     
+print(f"End time: {datetime.datetime.now()}")
