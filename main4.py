@@ -767,7 +767,7 @@ sencell_dict=None
 # Extracting attention scores
 edge_index_selfloop_cell,attention_scores_cell = model.get_attention_scores(data)
 attention_scores_cell=attention_scores_cell.cpu().detach()
-attention_scores_cell = torch.trunc(attention_scores_cell*10000)/ 10000
+attention_scores_cell = torch.trunc(attention_scores_cell*100000)/ 100000
 edge_index_selfloop_cell=edge_index_selfloop_cell.cpu().detach()
 
 model.eval()
@@ -790,7 +790,7 @@ for epoch in range(5):
         old_sencell_dict=None
     
     GAT_embeddings=model.encode(data.x,data.edge_index).detach()
-    GAT_embeddings = torch.trunc(GAT_embeddings*10000)/ 10000
+    GAT_embeddings = torch.trunc(GAT_embeddings*100000)/ 100000
     sencell_dict, nonsencell_dict=build_cell_dict(gene_cell,predicted_cell_indexs,GAT_embeddings,graph_nx)
     
     if old_sencell_dict is not None:
@@ -821,7 +821,7 @@ for epoch in range(5):
     edge_index_selfloop,attention_scores = model.get_attention_scores(data)
     
     attention_scores=attention_scores.to('cpu')
-    attention_scores = torch.trunc(attention_scores*10000)/ 10000
+    attention_scores = torch.trunc(attention_scores*100000)/ 100000
 
     edge_index_selfloop=edge_index_selfloop.to('cpu')
     
