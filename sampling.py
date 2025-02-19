@@ -10,6 +10,7 @@ import seaborn as sns
 import os
 import time
 import logging
+import random
 
 from linetimer import CodeTimer
 
@@ -130,6 +131,7 @@ def identify_sencell_marker_graph(sampled_graph, model, cell_clusters,
                                   big_graph_index_dict,
                                   device,
                                   ratio=0.1, plot=False):
+    # 弃用
     # 这个函数专门用来识别gene全是marker的图上的sencell
     # cell_clusters: dict
 
@@ -183,6 +185,7 @@ def select_cell_by_genes(sampled_graph,
                          cell_clusters,
                          big_graph_index_dict,
                          model_GAT, device):
+    # 弃用
     # 在给定sengen和nonsengene的条件下，基于attention选取sampled_graph上的sencell和nonsencell
 
     # step 3: 计算attention
@@ -254,8 +257,12 @@ def select_cell_by_genes(sampled_graph,
 def calculateAtt(model_GAT, graph_pyg, device):
     # logger.info("Calculate attentions ...")
     model_GAT.eval()
+    # model_GAT.to("cpu")
+    # graph_pyg.to("cpu")
+    device='cpu'
     model_GAT.to(device)
     graph_pyg.to(device)
+    
     # edge_att: nx1
     # 注意这里的的edge是双向边
     # 对应的edge_att也是双向边的权重，而且二者不一定相同
@@ -272,6 +279,7 @@ def calculateAtt(model_GAT, graph_pyg, device):
 
 def get_cell_scores(cell_indexs, edge, att, big_graph_index_dict, sen_gene_indexs, nonsen_gene_indexs):
     # 费时
+    # 太奇怪了，在lab server上这个反而是最快的，多线程版本很费时
     cell_score_dict = {}
     sen_gene_indexs_set = set(sen_gene_indexs)
     nonsen_gene_indexs_set = set(nonsen_gene_indexs)
@@ -284,10 +292,13 @@ def get_cell_scores(cell_indexs, edge, att, big_graph_index_dict, sen_gene_index
         for gene_index, gene_att in zip(linked_genes, linked_atts):
             if big_graph_index_dict[int(gene_index)] in sen_gene_indexs_set:
                 sen_score += gene_att
-            elif big_graph_index_dict[int(gene_index)] in nonsen_gene_indexs_set:
-                nonsen_score += gene_att
             else:
-                print('Bug!!!')
+                nonsen_score += gene_att
+            # elif big_graph_index_dict[int(gene_index)] in nonsen_gene_indexs_set:
+            #     nonsen_score += gene_att
+            # else:
+            #     # 如果nonsen_gene_indexs_set不再是所有的非老化基因，这里就会报错
+            #     print('Bug!!!')
         cell_score_dict[cell_index] = [float(sen_score), float(nonsen_score)]
 
     return cell_score_dict
@@ -339,7 +350,7 @@ def get_cell_scores_par2(cell_indexs, edge, att, big_graph_index_dict, sen_gene_
     import threading
 
     jobs = []
-    pool = ThreadPoolExecutor(max_workers=1000)
+    pool = ThreadPoolExecutor()
 
     def sub_get_cell_scores_par1(cell_index):
         linked_genes = edge[1][edge[0] == cell_index]
@@ -369,31 +380,56 @@ def get_cell_scores_par2(cell_indexs, edge, att, big_graph_index_dict, sen_gene_
     return cell_score_dict
 
 
+def compute_outliners_v1(sencell_indexs,sencell_scores):
+    q1 = np.quantile(sencell_scores, 0.25)
+    q3 = np.quantile(sencell_scores, 0.75)
+    iqr = q3-q1
+    
+    upper_bound = q3+(3*iqr)
+    outliers = sencell_indexs[sencell_scores > upper_bound]
+    print('Tne number of outliners: ',len(outliers))
+    return outliers
+
+def compute_outliners_v2(sencell_indexs,sencell_scores):
+    from sklearn.covariance import EllipticEnvelope
+    res = EllipticEnvelope(contamination=0.01).fit_predict(sencell_scores.reshape(-1,1))
+    # predict returns 1 for an inlier and -1 for an outlier
+    
+    outliers = sencell_indexs[res == -1]
+    print('Tne number of outliners: ',len(outliers))
+    return outliers
+
 def identify_sencell_nonsencell(edge, att, sen_gene_indexs, nonsen_gene_indexs, cell_clusters, big_graph_index_dict, args):
     cell_indexs = list(cell_clusters.keys())
     # 存储每个cell的score, {cell_index:[sen_score,nonsen_score]}
-    with CodeTimer("get_cell_scores_par2",unit="s"):
-        cell_score_dict = get_cell_scores_par2(
+    with CodeTimer("get_cell_scores",unit="s"):
+        cell_score_dict = get_cell_scores(
             cell_indexs, edge, att, big_graph_index_dict, sen_gene_indexs, nonsen_gene_indexs)
     from utils import save_objs
     save_objs([cell_score_dict, big_graph_index_dict], os.path.join(
         args.output_dir, f'{args.exp_name}_cell_score_dict'))
+
 
     # score从小到大
     sencell_indexs = np.array([k for k, v in sorted(
         cell_score_dict.items(), key=lambda item: item[1][0])])
     sencell_scores = np.array([v[0] for k, v in sorted(
         cell_score_dict.items(), key=lambda item: item[1][0])])
-    # 选择score>0.1的
+    #  Algorithm 1: 选择score>0.1的
     # sencell_index=sencell_indexs[sencell_scores>0.1]
-    #  或者直接选择socre最大的200个
+    #  Algorithm 2: 或者直接选择socre最大的200个
     sencell_index = sencell_indexs[-args.sencell_num:]
+    #  Algorithm 3: 或者采用聚类的方法
+    # sencell_index=compute_outliners_v2(sencell_indexs,sencell_scores)
     # 去掉选择出的老化细胞
     for index in sencell_index:
         cell_score_dict.pop(index)
 
     # nonsencell_num是sencell的10倍
-    nonsencell_num = len(sencell_index)*10
+    if len(sencell_index)>=1000:
+        nonsencell_num = len(sencell_index)
+    else:
+        nonsencell_num = len(sencell_index)*5
     nonsencell_indexs = [k for k, v in sorted(
         cell_score_dict.items(), key=lambda item: item[1][1])]
     nonsencell_index = nonsencell_indexs[-nonsencell_num:]
@@ -447,8 +483,7 @@ def sub_sampling_by_random(graph_nx,
     # nonsen_gene_indexs=np.random.choice(nonsen_gene_ls,n_gene,replace=False)
     nonsen_gene_indexs = np.array(nonsen_gene_ls)
 
-    print(
-        f"    Sengene num: {len(sen_gene_indexs)}, Nonsengen num: {len(nonsen_gene_indexs)}")
+    print(f"sengene num: {len(sen_gene_indexs)}, Nonsengen num: {len(nonsen_gene_indexs)}")
     # step 2: 采样一阶邻居子图
     gene_ls = np.concatenate([sen_gene_indexs, nonsen_gene_indexs])
     assert len(set(gene_ls)) == len(sen_gene_indexs) + \
@@ -457,13 +492,14 @@ def sub_sampling_by_random(graph_nx,
     sampled_graph, cell_clusters, big_graph_index_dict = sub_sampling_by_genes(
         graph_nx, gene_ls)
 
-    print('After sampling, gene num: ', sum(sampled_graph.y))
+    print('after sampling, gene num: ', sum(sampled_graph.y))
 
     # step 3: 计算attention
     z, edge, att = calculateAtt(model_GAT, sampled_graph, 'cpu')
 
     # step 4: identify sencell and nonsencell
     # with CodeTimer("identify sencell",unit="s"):
+    print('identify sencell and nonsencell!')
     sencell_index, nonsencell_index, \
         sencell_cluster, nonsencell_cluster = identify_sencell_nonsencell(edge, att,
                                                                           sen_gene_indexs, nonsen_gene_indexs,
@@ -478,10 +514,73 @@ def sub_sampling_by_random(graph_nx,
     return sampled_graph, sencell_dict, nonsencell_dict, cell_clusters, big_graph_index_dict
 
 
-def identify_sen_genes(sencell_dict, nonsencell_dict, edge, att, sen_gene_num):
-    sencell_indexs = list(sencell_dict.keys())
-    nonsencell_indexs = list(nonsencell_dict.keys())
+def sub_sampling_by_random_v1(graph_nx,
+                              graph_pyg,
+                           sen_gene_ls,
+                           nonsen_gene_ls,
+                           model_GAT,
+                           args,
+                           sengene_marker=None,
+                           n_gene=50,
+                           gene_rate=0.3, cell_rate=0.5,
+                           debug=False):
+    # 这是采样的主函数
+    # 可以支持两种方式的采样，区别是有无marker
+    # 1. 给定一组老化的marker基因
+    # 2. 随机采样
+    # 这种采样基因这边既有marker基因，也有非marker基因
+    # 不采子图了，直接在整个大图上训练
+    print("Start sampling subgraph randomly ...")
+    # np.random.seed(0)
+    # step 1: 选择sen_gene and nonsen_gene
+    if sengene_marker is None:
+        sen_gene_indexs = np.random.choice(sen_gene_ls, n_gene, replace=False)
+    else:
+        sen_gene_indexs = sengene_marker
+        
+    # nonsen_gene_ls=random.sample(nonsen_gene_ls, len(sen_gene_indexs))
+    # nonsen_gene_indexs=np.random.choice(nonsen_gene_ls,n_gene,replace=False) 
+    
+    nonsen_gene_indexs = np.array(nonsen_gene_ls)
 
+    print(f"sengene num: {len(sen_gene_indexs)}, Nonsengen num: {len(nonsen_gene_indexs)}")
+     # step 2: 采样一阶邻居子图
+    sampled_graph=graph_pyg
+    cell_clusters_dict={}
+    for i in range(len(graph_nx.nodes)):
+        if graph_nx.nodes[i]['type'] == 'c':
+            cell_clusters_dict[i] = graph_nx.nodes[i]['cluster']
+    cell_clusters=cell_clusters_dict
+    
+    big_graph_index_dict={}
+    for i in range(args.gene_num+args.cell_num):
+        big_graph_index_dict[i]=i
+
+    # step 3: 计算attention
+    with CodeTimer("calculateAtt",unit="s"):
+        z, edge, att = calculateAtt(model_GAT, sampled_graph, args.device)
+
+    # step 4: identify sencell and nonsencell
+    # with CodeTimer("identify sencell",unit="s"):
+    print('identify sencell and nonsencell!')
+    sencell_index, nonsencell_index, \
+        sencell_cluster, nonsencell_cluster = identify_sencell_nonsencell(edge, att,
+                                                                          sen_gene_indexs, nonsen_gene_indexs,
+                                                                          cell_clusters, big_graph_index_dict, args)
+
+    # step 5: output
+    # 最后的输出结果，存储[emb，cluster, new_emb=0, big_graph_index]信息
+    # new_emb用来占位，big_graph_index是cell节点在大图上的index
+    sencell_dict, nonsencell_dict = get_outputs(
+        sencell_index, sencell_cluster, z, big_graph_index_dict, nonsencell_index, nonsencell_cluster)
+
+    return sampled_graph, sencell_dict, nonsencell_dict, cell_clusters, big_graph_index_dict,z
+
+
+    
+def identify_sen_genes(sencell_dict, edge, att, sen_gene_num):
+    sencell_indexs = list(sencell_dict.keys())
+    
     # 为每一个sencell所连接的基因赋予attention权重
     # 这里面存储与sencell所相连的gene（key）和attention权重（value）
     sen_gene_dict = {}
@@ -501,16 +600,52 @@ def identify_sen_genes(sencell_dict, nonsencell_dict, edge, att, sen_gene_num):
     # sen_gene_num=100
     # non_sen_gene_num=50
     # 怀疑这里的基因数量可能会影响结果
-    sen_gene_ls = [k for k, v in sorted(sen_gene_dict.items(), 
-                    key=lambda item: item[1][0]/item[1][1])][-sen_gene_num:]
-    return sen_gene_ls
+    # method 1
+    score_ls = [k for k, v in sorted(sen_gene_dict.items(), 
+                    key=lambda item: item[1][0]/item[1][1])]
+    sen_gene_ls=score_ls[-sen_gene_num:]
+    nonsen_gene_ls=score_ls[:1000]
+    # method 2
+    # sen_gene_ls = [k for k, v in sorted(sen_gene_dict.items(), 
+    #             key=lambda item: item[1][0])][-sen_gene_num:]
+    return sen_gene_ls,nonsen_gene_ls
+
+
 
 
 def identify_nonsen_genes(sampled_graph, sen_gene_ls):
+    # 这里非老化基因是直接把除老化以外的都选择上了
     all_geneset = set(torch.arange(len(sampled_graph.y))
                       [sampled_graph.y].tolist())
     nonsen_gene_indexs = list(all_geneset-set(sen_gene_ls))
     return nonsen_gene_indexs
+
+
+def identify_nonsen_genes_v1(nonsencell_dict, edge, att, sen_gene_num):
+    nonsencell_indexs = list(nonsencell_dict.keys())
+
+    # 为每一个sencell所连接的基因赋予attention权重
+    # 这里面存储与sencell所相连的gene（key）和attention权重（value）
+    nonsen_gene_dict = {}
+    for nonsencell_index in nonsencell_indexs:
+        candidate_genes = edge[0][edge[1] == nonsencell_index]
+        candidate_genes_atts = att[edge[1] == nonsencell_index]
+        for candidate_gene, candidate_genes_att in zip(candidate_genes, candidate_genes_atts):
+            index = int(candidate_gene)
+            if index not in nonsen_gene_dict:
+                nonsen_gene_dict[index] = [candidate_genes_att, 1]
+            else:
+                nonsen_gene_dict[index] = [nonsen_gene_dict[index][0] +
+                                        candidate_genes_att, nonsen_gene_dict[index][1]+1]
+            # sen_gene_dict[index]=sen_gene_dict.get(index,0)+candidate_genes_att
+
+    # 依据att从小到大
+    # sen_gene_num=100
+    # non_sen_gene_num=50
+    # 怀疑这里的基因数量可能会影响结果
+    nonsen_gene_ls = [k for k, v in sorted(nonsen_gene_dict.items(), 
+                    key=lambda item: item[1][0]/item[1][1])][-sen_gene_num:]
+    return nonsen_gene_ls
 
 
 def identify_sengene_then_sencell(sampled_graph, model_GAT,
@@ -518,7 +653,6 @@ def identify_sengene_then_sencell(sampled_graph, model_GAT,
                                   nonsencell_dict,
                                   cell_clusters,
                                   big_graph_index_dict,
-                                  sengene_num,
                                   args,
                                   ratio=0.1, plot=False):
     # 基于更新后的老化细胞embedding，重新选择老化基因
@@ -526,14 +660,17 @@ def identify_sengene_then_sencell(sampled_graph, model_GAT,
     # 然后再识别老化细胞
     # cell_clusters: tensor
 
+    print("identify_sengene_then_sencell")
+    
     # step 1: get embedding and attention
-    z, edge, att = calculateAtt(model_GAT, sampled_graph, 'cpu')
+    z, edge, att = calculateAtt(model_GAT, sampled_graph, args.device)
 
     # step 2: 识别老化基因和非老化基因
     # 这里的到的index都是relabled后的
-    sen_gene_indexs = identify_sen_genes(
-        sencell_dict, nonsencell_dict, edge, att, sengene_num)
-    nonsen_gene_indexs = identify_nonsen_genes(sampled_graph, sen_gene_indexs)
+    sen_gene_indexs,nonsen_gene_indexs = identify_sen_genes(sencell_dict, edge, att, args.sengene_num)
+    # nonsen_gene_indexs = identify_nonsen_genes_v1(nonsencell_dict, edge, att, 200)
+    # nonsen_gene_indexs = identify_nonsen_genes(sampled_graph, sen_gene_indexs)
+    
     print('rechoice sengene num:', len(sen_gene_indexs),
           'rechoice nonsengene num:', len(nonsen_gene_indexs))
 
@@ -554,3 +691,59 @@ def identify_sengene_then_sencell(sampled_graph, model_GAT,
         sencell_index, sencell_cluster, z, big_graph_index_dict, nonsencell_index, nonsencell_cluster)
 
     return sencell_dict, nonsencell_dict, sen_gene_indexs, nonsen_gene_indexs
+
+
+
+def identify_sengene_then_sencell_v1(sampled_graph, model_GAT,
+                                  sencell_dict,
+                                  nonsencell_dict,
+                                  cell_clusters,
+                                  big_graph_index_dict,
+                                  args,
+                                  ratio=0.1, plot=False):
+    # 基于更新后的老化细胞embedding，重新选择老化基因
+    # 这个函数里面首先会先识别老化基因
+    # 然后再识别老化细胞
+    # cell_clusters: tensor
+
+    print("identify_sengene_then_sencell_v1")
+    
+    # step 1: get embedding and attention
+    z, edge, att = calculateAtt(model_GAT, sampled_graph, args.device)
+
+    # step 2: 识别老化基因和非老化基因
+    # 这里的到的index都是relabled后的
+    sen_gene_indexs,_ = identify_sen_genes(sencell_dict, edge, att, args.sengene_num)
+    nonsen_gene_indexs,_ = identify_sen_genes(nonsencell_dict, edge, att, args.sengene_num)
+    
+    new_sen_gene_indexs=[]
+    for i in sen_gene_indexs:
+        if i not in nonsen_gene_indexs:
+            new_sen_gene_indexs.append(i)
+    
+    print(f"sen_gene_indexs: {len(sen_gene_indexs)}, sen_gene_indexs: {len(nonsen_gene_indexs)}, new_sen_gene_indexs: {len(new_sen_gene_indexs)}")
+    
+    # nonsen_gene_indexs = identify_nonsen_genes_v1(nonsencell_dict, edge, att, 200)
+    # nonsen_gene_indexs = identify_nonsen_genes(sampled_graph, sen_gene_indexs)
+    
+    print('rechoice sengene num:', len(new_sen_gene_indexs),
+          'rechoice nonsengene num:', len(nonsen_gene_indexs))
+
+    # 把得到的基因转化成大图上的gene
+    sen_gene_indexs = [big_graph_index_dict[i] for i in new_sen_gene_indexs]
+    nonsen_gene_indexs = [big_graph_index_dict[i] for i in nonsen_gene_indexs]
+
+    # step 3: 识别老化细胞
+    sencell_index, nonsencell_index, \
+        sencell_cluster, nonsencell_cluster = identify_sencell_nonsencell(edge, att,
+                                                                          sen_gene_indexs, nonsen_gene_indexs,
+                                                                          cell_clusters, big_graph_index_dict, args)
+
+    # step 3: output
+    # 最后的输出结果，存储[emb，cluster, new_emb=0, big_graph_index]信息
+    # new_emb用来占位，big_graph_index是cell节点在大图上的index
+    sencell_dict, nonsencell_dict = get_outputs(
+        sencell_index, sencell_cluster, z, big_graph_index_dict, nonsencell_index, nonsencell_cluster)
+
+    return sencell_dict, nonsencell_dict, sen_gene_indexs, nonsen_gene_indexs
+

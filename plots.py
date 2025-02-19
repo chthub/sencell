@@ -162,6 +162,28 @@ def umapPlot(embedding, cell_index_ls, clusters=None, reduce=False, labels=None)
                     1], s=5, color='black', marker='x', label='sencell')
         plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
 
+def umapPlot_v1(embedding, cell_index_ls, clusters=None, reduce=False, labels=None):
+    # if tensor: embedding should be .cpu().detach()
+    # clusters: Nxt
+    # t里面存的是行的index
+    if reduce:
+        reducer = umap.UMAP()
+        embedding = reducer.fit_transform(embedding)
+
+    plt.figure(figsize=(6, 6), dpi=300)
+    # cmap1 = matplotlib.cm.get_cmap('tab20')
+    cmap2 = matplotlib.cm.get_cmap('Set2')
+    color_ls = cmap2.colors
+    if clusters is None:
+        plt.scatter(embedding[:, 0], embedding[:, 1], alpha=0.5, s=5)
+    else:
+        for i, (cluster, label) in enumerate(zip(clusters, labels)):
+            plt.scatter(embedding[cluster, 0], embedding[cluster, 1],
+                        alpha=0.4, s=5, color=color_ls[i], label=label)
+
+        plt.scatter(embedding[cell_index_ls, 0], embedding[cell_index_ls,
+                    1], s=5, color='black', marker='x', label='sencell')
+        plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
 
 def subUmapPlot(embedding, cluster_cell_dict, clusters=None, reduce=False, labels=None):
     # if tensor: embedding should be .cpu().detach()
@@ -177,6 +199,53 @@ def subUmapPlot(embedding, cluster_cell_dict, clusters=None, reduce=False, label
     cmap1 = matplotlib.cm.get_cmap('tab20')
     cmap2 = matplotlib.cm.get_cmap('Set3')
     color_ls = cmap1.colors+cmap2.colors
+    if clusters is None:
+        plt.scatter(embedding[:, 0], embedding[:, 1], alpha=0.5, s=5)
+    else:
+        x_s = []
+        y_s = []
+        label_s = []
+        for cluster, label in zip(clusters, labels):
+            x_s.append(embedding[cluster, 0])
+            y_s.append(embedding[cluster, 1])
+            label_s.append(label)
+        count = 0
+        for i, row in enumerate(axes):
+            for j, col in enumerate(row):
+                if count < 21:
+                    col.scatter(x_s[count], y_s[count],
+                                alpha=0.5, color=color_ls[count], s=5)
+                    sencell_num = 0
+                    if count in cluster_cell_dict:
+                        # 这一簇有老化细胞
+                        col.scatter(embedding[cluster_cell_dict[count], 0], embedding[cluster_cell_dict[count], 1],
+                                    s=3, color='black', marker='x', label='sencell')
+                        sencell_num = len(cluster_cell_dict[count])
+
+                    col.set_title(
+                        f"{label_s[count]} ({sencell_num}/{len(clusters[count])})", fontsize=5)
+                    count += 1
+                else:
+                    col.set_visible(False)
+    plt.setp(fig.axes, yticks=[], xticks=[])
+
+    plt.tight_layout()
+    
+    
+def subUmapPlot_v1(embedding, cluster_cell_dict, clusters=None, reduce=False, labels=None):
+    # if tensor: embedding should be .cpu().detach()
+    # clusters: Nxt
+    # t里面存的是行的index
+    if reduce:
+        reducer = umap.UMAP()
+        embedding = reducer.fit_transform(embedding)
+
+    fig, axes = plt.subplots(
+        2, 2, sharex=False, sharey=False, figsize=(6, 6), dpi=300)
+
+    # cmap1 = matplotlib.cm.get_cmap('tab20')
+    cmap2 = matplotlib.cm.get_cmap('Set2')
+    color_ls = cmap2.colors
     if clusters is None:
         plt.scatter(embedding[:, 0], embedding[:, 1], alpha=0.5, s=5)
     else:

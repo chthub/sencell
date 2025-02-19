@@ -24,8 +24,8 @@ set -x
 # dataset_name=disease
 # sencell_num=250
 
-dataset_name=disease1
-sencell_num=250
+# dataset_name=disease1
+# sencell_num=250
 
 # dataset_name=healthy
 # sencell_num=100
@@ -33,21 +33,25 @@ sencell_num=250
 # dataset_name=hd
 # sencell_num=350
 
-env=osc
-# env=server
+# env=osc
+env=server
 
 
 if [ $env == server ]; then
     cd outputs
-    dir_name=$RANDOM 
+    dir_name=$1 
+    dataset_name=$3
+    sencell_num=$4
     mkdir $dir_name
     cd ..
 
     time python -u main.py \
         --exp_name ${dataset_name}_${dir_name} \
         --output_dir ./outputs/${dir_name} \
+        --gat_epoch 30 \
+        --device_index $2 \
         --sencell_num ${sencell_num} \
-        --device_index 1 --retrain
+        --retrain
 
 elif [ $env == 'osc' ]; then
     cd /users/PCON0022/haocheng/sencell/outputs

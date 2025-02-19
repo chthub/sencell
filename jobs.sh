@@ -1,11 +1,24 @@
-for sencell_num in 25 50 75 100 125 150 175
-do
+# for sencell_num in 25 50 75 100 125 150 175
+# do
 
-sbatch --export=sencell_num=${sencell_num} run.sh
-sbatch --export=sencell_num=${sencell_num} run.sh
-sbatch --export=sencell_num=${sencell_num} run.sh
+# sbatch --export=sencell_num=${sencell_num} run.sh
+# sbatch --export=sencell_num=${sencell_num} run.sh
+# sbatch --export=sencell_num=${sencell_num} run.sh
 
-done
+# done
+
+
+
+
+
+nohup python -u main.py --exp_name fixbatch --batch_id 0 --device_index 1 --output_dir ./outputs/23-11-28-21-45-fixbatch > ./log/fixRNA_0.log 2>&1 &
+nohup python -u main.py --exp_name fixbatch --batch_id 1 --device_index 2 --output_dir ./outputs/23-11-28-21-46-fixbatch > ./log/fixRNA_1.log 2>&1 &
+nohup python -u main.py --exp_name fixbatch --batch_id 2 --device_index 3 --retrain > ./log/fixRNA_2.log 2>&1 &
+nohup python -u main.py --exp_name fixbatch --batch_id 3 --device_index 4 --retrain > ./log/fixRNA_3.log 2>&1 &
+nohup python -u main.py --exp_name fixbatch --batch_id 4 --device_index 5 --retrain > ./log/fixRNA_4.log 2>&1 &
+
+
+
 
 # Submitted batch job 13975477
 # Submitted batch job 13975478

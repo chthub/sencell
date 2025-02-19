@@ -240,6 +240,72 @@ def load_data2(path="/bmbl_data/chenghao/U54/deepSAS_data2.h5ad"):
 
 
 
+def load_data_rep(exp_name):
+    file_name=f"/bmbl_data/chenghao/sencell/data4_robust_test/{exp_name}.h5ad"
+    print("load_data ", file_name, "...")
+    adata = sp.read_h5ad(file_name)
+    ct_name='clusters'
+    
+    sp.pp.filter_cells(adata, min_genes=200)
+    sp.pp.filter_genes(adata, min_cells=10)
+
+    print(f'Number of cells: {adata.shape[0]}\nNumber of genes: {adata.shape[1]}')
+    
+    celltype_names=list(adata.obs[ct_name].value_counts().index)
+
+    print("The number of cell types", len(celltype_names))
+    print("celltype names:", celltype_names)
+    # 2d-list, 存储每个cluster里面包含的cell index
+    cluster_cell_ls = []
+    # 1d-array，存储每个cell的cluster index
+    cell_cluster_arr = np.array([0]*adata.shape[0])
+    # 所有cell的index
+    all_indexs = np.arange(adata.shape[0])
+    for i, celltype_name in enumerate(celltype_names):
+        cell_indexs = all_indexs[adata.obs[ct_name]
+                                 == celltype_name]
+        cluster_cell_ls.append(cell_indexs)
+        cell_cluster_arr[cell_indexs] = i
+
+    outputs = [[celltype_names[i], len(j)]
+               for i, j in enumerate(cluster_cell_ls)]
+    print(tabulate(outputs))
+    return adata, cluster_cell_ls, cell_cluster_arr, celltype_names
+
+
+
+def load_data1(path="/bmbl_data/huchen/deepSAS_data/new_anno_data1.h5ad"):
+    # "/bmbl_data/chenghao/sencell/fixed_data_0520.h5ad", 7w cells
+    print("load_data1 ...")
+    adata = sp.read_h5ad(path)
+    ct_name='clusters'
+    
+    sp.pp.filter_cells(adata, min_genes=200)
+    sp.pp.filter_genes(adata, min_cells=10)
+
+    print(f'Number of cells: {adata.shape[0]}\nNumber of genes: {adata.shape[1]}')
+    
+    celltype_names=list(adata.obs[ct_name].value_counts().index)
+
+    print("The number of cell types", len(celltype_names))
+    print("celltype names:", celltype_names)
+    # 2d-list, 存储每个cluster里面包含的cell index
+    cluster_cell_ls = []
+    # 1d-array，存储每个cell的cluster index
+    cell_cluster_arr = np.array([0]*adata.shape[0])
+    # 所有cell的index
+    all_indexs = np.arange(adata.shape[0])
+    for i, celltype_name in enumerate(celltype_names):
+        cell_indexs = all_indexs[adata.obs[ct_name]
+                                 == celltype_name]
+        cluster_cell_ls.append(cell_indexs)
+        cell_cluster_arr[cell_indexs] = i
+
+    outputs = [[celltype_names[i], len(j)]
+               for i, j in enumerate(cluster_cell_ls)]
+    print(tabulate(outputs))
+    return adata, cluster_cell_ls, cell_cluster_arr, celltype_names
+
 
 def get_ccc_markers():
     ligand_receptor_dict = {
