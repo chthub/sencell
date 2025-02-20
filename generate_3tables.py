@@ -163,13 +163,14 @@ elif 'data1' in args.exp_name:
 # plots.umapPlot(adata.obsm['X_umap'],clusters=cell_cluster_arr,labels=celltype_names)
 
 new_data, markers_index,\
-    sen_gene_ls, nonsen_gene_ls, gene_names = utils.process_data(
+    raw_sen_gene_ls, nonsen_gene_ls, gene_names = utils.process_data(
         adata, cluster_cell_ls, cell_cluster_arr,args)
     
+# raw sene gene idx: gene name
+inital_masker = pd.DataFrame({'gene_idx': raw_sen_gene_ls, 'gene_name': list(new_data.var_names[raw_sen_gene_ls])})
 
 # file_path = "/bmbl_data/huchen/sencell_data1_base/outputs/data1/data1_sencellgene-epoch4base_decimal.data"
 file_path=f'./outputs/-data1/data1_sencellgene-epoch{4}.data'
-hallmarker_path="/bmbl_data/huchen/sencell_data1_base/initial_sene_markers.csv"
 output_path='SnGs_1'
 
 
@@ -178,14 +179,13 @@ os.makedirs(output_path, exist_ok=True)
 # Load the saved object
 loaded_data = torch.load(file_path)
 
-# Unpack the loaded data
+# Unpack the loaded data, sen_gene_ls is new sene gene list from DeepSAS
 sencell_dict, sen_gene_ls, attention_scores, edge_index_selfloop = loaded_data
 
 print(f"Number of SnCs: {len(sencell_dict.keys())}")
 print(f"Number of SnGs: {len(sen_gene_ls)}")
 
 
-inital_masker = pd.read_csv(hallmarker_path)
 
 base_filtered_gene_names = []
 for gene_idx in sen_gene_ls:
