@@ -1,8 +1,14 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib.colors import LinearSegmentedColormap
 import seaborn as sns
+import gseapy as gp
+import os
+
+import matplotlib
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
+matplotlib.rcParams.update({'font.family': 'Arial'})
+
 
 color_ls = [
     "#3cb44b",
@@ -626,3 +632,219 @@ def create_summary_table(adata):
         )
 
     return summary_df
+
+
+
+def generate_heatmap_snc(adata,
+                         table3_path="SnGs_data2_1/data1_Gene_newTable3_gene_ct_count.csv",
+                         z_score=True):
+        
+    df_table3=pd.read_csv(table3_path)
+    
+    df_sorted = df_table3.sort_values(
+        by=['cell_type','gene'],
+        key=lambda col: col.str.lower()
+    )
+    
+    # Define the desired order for genes (rows) and clusters (columns)
+    gene_order = df_sorted['gene']
+    
+    cluster_order = df_sorted['cell_type'].unique().tolist()
+    
+    # Define the order for cell status; here we assume you want "normal" first, then "SnC"
+    status_order = ["SnC","normal"]
+    
+    
+    # Create a DataFrame of expression values (cells x genes).
+    # If adata.X is sparse, convert it to a dense array.
+    if hasattr(adata.X, "toarray"):
+        expr_df = pd.DataFrame(adata.X.toarray(), index=adata.obs_names, columns=adata.var.index)
+    else:
+        expr_df = pd.DataFrame(adata.X, index=adata.obs_names, columns=adata.var.index)
+    
+    # Add the cluster and cell status information from adata.obs.
+    expr_df["cluster"] = adata.obs["clusters"].values
+    expr_df["is_sen"] = adata.obs["is_sen"].values
+    
+    # Compute the average expression per (cluster, is_sen) combination.
+    # The resulting DataFrame will have a MultiIndex: (cluster, is_sen) and columns = genes.
+    grouped = expr_df.groupby(["cluster", "is_sen"]).mean()
+    
+    
+    # Transpose so that rows are genes and columns are the MultiIndex (cluster, is_sen)
+    heatmap_df = grouped.T
+    heatmap_df = heatmap_df.loc[gene_order]
+    # Reorder the columns:
+    # For each cluster in the specified order, for each cell status in the desired order,
+    # add the corresponding column if it exists.
+    new_columns = []
+    for cl in cluster_order:
+        for st in status_order:
+            if (cl, st) in heatmap_df.columns:
+                new_columns.append((cl, st))
+    
+    heatmap_df = heatmap_df[new_columns]
+    
+    # (Optional) Row-normalize the data (e.g., z-score normalization across each gene)
+    
+    
+    if z_score:
+        heatmap_df_norm = heatmap_df.sub(heatmap_df.mean(axis=1), axis=0)
+        heatmap_df_norm = heatmap_df_norm.div(heatmap_df.std(axis=1), axis=0)
+        heatmap_df=heatmap_df_norm
+    
+    
+    # Plot the heatmap.
+    plt.figure(figsize=(len(new_columns), len(gene_order)*0.3),dpi=300)
+    
+    from matplotlib.colors import LinearSegmentedColormap
+    # low color, medium and high color seperately
+    cmap = LinearSegmentedColormap.from_list('custom_cmap', ['#4F99A9','white','#D65A79'])
+    # cmap = LinearSegmentedColormap.from_list('custom_cmap', ['#54a1c9','#ea599b'])
+    sns.heatmap(heatmap_df, cmap=cmap, xticklabels=True, yticklabels=True)
+    
+    # Flatten the MultiIndex columns for display
+    plt.xticks(
+        ticks=np.arange(len(new_columns)) + 0.5,
+        labels=[f"{cl}\n{st}" for cl, st in new_columns],
+        rotation=45,
+        ha="right"
+    )
+    plt.xlabel("Cluster and Cell Status")
+    plt.ylabel("Genes")
+    plt.title("Row-normalized Mean Expression by Cluster and Cell Status")
+    plt.tight_layout()
+    
+    plt.savefig('high_res_heatmap_snc.png', dpi=300)
+    plt.show()
+
+
+def plot_enrichment(df_table2_path="SnGs_data2_1/data1_Gene_Table2_DEG_ct_SnG_score.csv",
+                    outdir = "enrichr_results",
+                    cut_off=0.1
+                    ):
+    df_table2=pd.read_csv(df_table2_path)
+    result_df = df_table2.groupby('cell_type')['gene'].agg(
+        gene_count='count',                      # Count the number of genes per cell type
+        gene_list=lambda x: list(x)              # Aggregate the genes into a list
+    ).reset_index()
+    
+    for index_, row in result_df.iterrows():
+        ct_ = row['cell_type']
+        gene_list = row['gene_list']
+        
+        libraries = [
+            "KEGG_2021_Human", 
+            "GO_Biological_Process_2023", 
+            "GO_Cellular_Component_2023", 
+            "GO_Molecular_Function_2023"
+        ]
+        
+        os.makedirs(outdir, exist_ok=True)
+        
+        for lib in libraries:
+            print(f"For {ct_}, processing library: {lib}")
+            
+            # Run enrichment analysis with cutoff=0.05
+            try:
+                enr = gp.enrichr(
+                    gene_list=gene_list,
+                    gene_sets=lib,
+                    organism="human",
+                    outdir=outdir,
+                    cutoff=cut_off  # Original cutoff
+                )
+            except ValueError as e:
+                print(f"\tEnrichR error for cutoff = {cut_off}, {ct_} in {lib}: {e}")
+            
+            
+            # Save results to CSV
+            csv_path = os.path.join(outdir, f"enrichment_{ct_}_{lib}.csv")
+            enr.results.to_csv(csv_path, index=False)
+            print(f"\tResults saved to {csv_path}")
+            
+            
+            # Generate a barplot of the enrichment results
+            ax = gp.barplot(
+                enr.results,
+                title=f"Enrichment Barplot - {lib}",
+                cutoff=cut_off,
+                figsize=(6, 6)
+            )
+                
+            # Save the barplot as a PNG file
+            png_path = os.path.join(outdir, f"barplot_{ct_}_{lib}.png")
+            plt.savefig(png_path, dpi=300, bbox_inches="tight")
+            print(f"\tBarplot saved to {png_path}")
+            
+            plt.close()
+
+
+
+def plot_violin(adata,
+                output_dir = "violin_plots",
+                table3_path="SnGs_data2_1/data1_Gene_newTable3_gene_ct_count.csv"):
+    # generate violin plots for each gene-cell type pair from table 3
+    
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Define custom order and palette for senescence status
+    order = ['SnC', 'normal']
+    palette = {'SnC': '#D65A79', 'normal': '#4F99A9'}
+
+    gene_ct_table=pd.read_csv(table3_path)
+
+    # Loop over each gene-cell type pair to generate and save plots.
+    for index,row in gene_ct_table.iterrows():
+        gene = row['gene']
+        cell_type = row['cell_type']
+        print(gene,cell_type)
+        # Subset adata to the specified cell type
+        adata_subset = adata[adata.obs['clusters'] == cell_type, :]
+
+        # Check if gene exists in the dataset
+        if gene not in adata_subset.var_names:
+            print(f"Gene {gene} not found in adata for cell type {cell_type}. Skipping.")
+            continue
+
+        # Extract the expression data for the gene.
+        expr_data = adata_subset[:, gene].X
+        if hasattr(expr_data, "toarray"):
+            expr_data = expr_data.toarray().flatten()
+        else:
+            expr_data = np.array(expr_data).flatten()
+
+        # Create a DataFrame for plotting.
+        df = pd.DataFrame({
+            'Expression': expr_data,
+            'Senescence': adata_subset.obs['is_sen']
+        })
+
+        # Create the violin plot.
+        plt.figure(figsize=(8, 6))
+        ax = sns.violinplot(x='Senescence', y='Expression', data=df, order=order, 
+                            cut=0,
+                            palette=palette)
+
+        # Compute and annotate the mean for each group.
+        group_means = df.groupby('Senescence')['Expression'].mean().reindex(order)
+        for i, group in enumerate(order):
+            mean_val = group_means[group]
+            # Adjust x position for the annotation (left offset for "snc", right for "normal")
+            offset = -0.15 if group == 'snc' else 0.05
+            plt.text(i + offset, mean_val, f'Mean: {mean_val:.2f}', color='black', fontweight='bold')
+
+        # Add plot title and labels.
+        plt.title(f"{gene} Expression in {cell_type}")
+        plt.xlabel("Senescence Status")
+        plt.ylabel("Expression Count")
+
+        # Save the plot to a PNG file.
+        # Replace spaces in cell type with underscores for filename.
+        filename = f"{gene}_{cell_type.replace(' ', '_')}.png"
+        filepath = os.path.join(output_dir, filename)
+        plt.tight_layout()
+        plt.savefig(filepath)
+        plt.close()  # Close the figure to free up memory
+
+        print(f"Saved plot for {gene} in {cell_type} to {filepath}")
