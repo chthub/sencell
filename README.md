@@ -26,6 +26,7 @@ Ensure you have Python 3.8 or later installed. This project is developed and tes
    ```bash
    git clone https://github.com/chthub/sencell.git
    cd sencell/
+   git checkout deepsas-v1
    ```
 
 2. **Set Up a uv Environment** (recommended):
@@ -39,12 +40,12 @@ Ensure you have Python 3.8 or later installed. This project is developed and tes
 4. **Install Dependencies**:
    
    ```bash
-   uv pip install numpy seaborn matplotlib pandas tabulate linetimer scikit-learn ipykernel 'scanpy[leiden]' tqdm
+   uv pip install numpy seaborn matplotlib pandas tabulate linetimer scikit-learn ipykernel 'scanpy[leiden]' tqdm 
    ```
    For [Pytorch](https://pytorch.org/), [DGL](https://www.dgl.ai/) and [PyG](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html),  ensure you select the CUDA version that best suits your system. Below is an example from our test environment:
    ```bash
    uv pip install torch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 --index-url https://download.pytorch.org/whl/cu121
-   uv pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.4.0+cu121.htmluv 
+   uv pip install torch_geometric pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.4.0+cu121.html 
    uv pip install dgl -f https://data.dgl.ai/wheels/torch-2.4/cu121/repo.html
    ```
 
@@ -56,7 +57,7 @@ Ensure you have Python 3.8 or later installed. This project is developed and tes
 Run the main script using the following command with required flags:
 
 ```bash
-nohup uv run python -u deepsas_v1.py --output_dir ./outputs --exp_name "example" --device_index 0 --retrain > ./log/example.log 2>&1 &
+nohup uv run python -u deepsas_v1.py --output_dir ./outputs --exp_name example --device_index 0 --retrain > ./example.log 2>&1 &
 ```
 
 #### Important Arguments
