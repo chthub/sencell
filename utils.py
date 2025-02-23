@@ -7,7 +7,7 @@ from torch_geometric.data import Data as Graphdata
 from torch_geometric.utils import to_undirected
 import networkx as nx
 from tabulate import tabulate
-import dgl
+# import dgl
 import scipy
 from scipy import sparse as scsp
 
@@ -467,44 +467,44 @@ def convert_to_adj_v2(ccc_matrix, t=0.8):
     
 
 
-def positional_encoding(g, pos_enc_dim=32):
-    """
-        Graph positional encoding v/ Laplacian eigenvectors
-    """
-    print("Caculate pos encoding ...")
-    adjacency_matrix = g.adjacency_matrix().to_dense()
-    # convert to scipy sparse matrix
-    A = scsp.csr_matrix(adjacency_matrix.numpy())
-    N = scsp.diags(dgl.backend.asnumpy(g.in_degrees()).clip(1) ** -0.5, dtype=float)
-    L = scsp.eye(g.number_of_nodes()) - N * A * N
+# def positional_encoding(g, pos_enc_dim=32):
+#     """
+#         Graph positional encoding v/ Laplacian eigenvectors
+#     """
+#     print("Caculate pos encoding ...")
+#     adjacency_matrix = g.adjacency_matrix().to_dense()
+#     # convert to scipy sparse matrix
+#     A = scsp.csr_matrix(adjacency_matrix.numpy())
+#     N = scsp.diags(dgl.backend.asnumpy(g.in_degrees()).clip(1) ** -0.5, dtype=float)
+#     L = scsp.eye(g.number_of_nodes()) - N * A * N
 
-    # Eigenvectors with numpy
-    EigVal, EigVec = np.linalg.eig(L.toarray())
-    idx = EigVal.argsort() # increasing order
-    EigVal, EigVec = EigVal[idx], np.real(EigVec[:,idx])
-    g.ndata['pos_enc'] = torch.from_numpy(EigVec[:,1:pos_enc_dim+1]).float() 
+#     # Eigenvectors with numpy
+#     EigVal, EigVec = np.linalg.eig(L.toarray())
+#     idx = EigVal.argsort() # increasing order
+#     EigVal, EigVec = EigVal[idx], np.real(EigVec[:,idx])
+#     g.ndata['pos_enc'] = torch.from_numpy(EigVec[:,1:pos_enc_dim+1]).float() 
     
-    return g
+#     return g
 
 
 import scipy.sparse.linalg as lg
 
-def positional_encoding_v1(g, pos_enc_dim=32):
-    """
-        Graph positional encoding v/ Laplacian eigenvectors
-    """
-    print("Calculate pos encoding ...")
-    adjacency_matrix = g.adjacency_matrix().to_dense()
-    # Convert to scipy sparse matrix
-    A = scsp.csr_matrix(adjacency_matrix.numpy())
-    N = scsp.diags(dgl.backend.asnumpy(g.in_degrees()).clip(1) ** -0.5, dtype=float)
-    L = scsp.eye(g.number_of_nodes()) - N * A * N
+# def positional_encoding_v1(g, pos_enc_dim=32):
+#     """
+#         Graph positional encoding v/ Laplacian eigenvectors
+#     """
+#     print("Calculate pos encoding ...")
+#     adjacency_matrix = g.adjacency_matrix().to_dense()
+#     # Convert to scipy sparse matrix
+#     A = scsp.csr_matrix(adjacency_matrix.numpy())
+#     N = scsp.diags(dgl.backend.asnumpy(g.in_degrees()).clip(1) ** -0.5, dtype=float)
+#     L = scsp.eye(g.number_of_nodes()) - N * A * N
 
-    # Eigenvectors with scipy for sparse matrices
-    EigVal, EigVec = lg.eigsh(L, k=pos_enc_dim+1, which='SM')  # smallest eigenvalues
-    g.ndata['pos_enc'] = torch.from_numpy(EigVec[:,1:]).float() 
+#     # Eigenvectors with scipy for sparse matrices
+#     EigVal, EigVec = lg.eigsh(L, k=pos_enc_dim+1, which='SM')  # smallest eigenvalues
+#     g.ndata['pos_enc'] = torch.from_numpy(EigVec[:,1:]).float() 
     
-    return g
+#     return g
 
 
 def build_ccc_graph(gene_cell,gene_names):
@@ -515,25 +515,25 @@ def build_ccc_graph(gene_cell,gene_names):
     return adj_matrix,ccc_matrix
 
 
-def update_dglgraph(cellmodel,embs,dgl_graph,args):
-    cell_embs=embs[args.gene_num:]
-    pos_embs=[]
-    for i in range(args.cell_num):
-        pos_embs.append(dgl_graph.nodes[i].data['pos_enc'].reshape(1,-1))
+# def update_dglgraph(cellmodel,embs,dgl_graph,args):
+#     cell_embs=embs[args.gene_num:]
+#     pos_embs=[]
+#     for i in range(args.cell_num):
+#         pos_embs.append(dgl_graph.nodes[i].data['pos_enc'].reshape(1,-1))
 
-    pos_embs=torch.cat(pos_embs)
-    new_emb=torch.cat([cell_embs,pos_embs],axis=1)
-    result_emb=cellmodel.get_embeddings(new_emb,args.device).detach().cpu().numpy()
+#     pos_embs=torch.cat(pos_embs)
+#     new_emb=torch.cat([cell_embs,pos_embs],axis=1)
+#     result_emb=cellmodel.get_embeddings(new_emb,args.device).detach().cpu().numpy()
 
-    adj_matrix=convert_to_adj_v2(result_emb,t=0.4)
+#     adj_matrix=convert_to_adj_v2(result_emb,t=0.4)
     
-    index1, index2 = np.nonzero(adj_matrix)
-    print('the number of edges:', len(index1))
+#     index1, index2 = np.nonzero(adj_matrix)
+#     print('the number of edges:', len(index1))
 
-    dgl_graph = dgl.graph((index1, index2),num_nodes=args.cell_num)
+#     dgl_graph = dgl.graph((index1, index2),num_nodes=args.cell_num)
     
-    dgl_graph=positional_encoding(dgl_graph)
-    return dgl_graph,adj_matrix
+#     dgl_graph=positional_encoding(dgl_graph)
+#     return dgl_graph,adj_matrix
 
 
 def get_sencell_cover(old_sencell_dict, sencell_dict):

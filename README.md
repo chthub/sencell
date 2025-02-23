@@ -42,11 +42,10 @@ Ensure you have Python 3.8 or later installed. This project is developed and tes
    ```bash
    uv pip install numpy seaborn matplotlib pandas tabulate linetimer scikit-learn ipykernel 'scanpy[leiden]' tqdm 
    ```
-   For [Pytorch](https://pytorch.org/), [DGL](https://www.dgl.ai/) and [PyG](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html),  ensure you select the CUDA version that best suits your system. Below is an example from our test environment:
+   For [Pytorch](https://pytorch.org/) and [PyG](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html),  ensure you select the CUDA version that best suits your system. Below is an example from our test environment:
    ```bash
    uv pip install torch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 --index-url https://download.pytorch.org/whl/cu121
    uv pip install torch_geometric pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.4.0+cu121.html 
-   uv pip install dgl -f https://data.dgl.ai/wheels/torch-2.4/cu121/repo.html
    ```
 
 4. **Environment Variables**:
@@ -64,7 +63,7 @@ For the visualization of SnCs and SnGs, please follow the tutorial in the [`plot
 
 To generate 3 table of SnGs:
 ```bash
-uv run python -u generate_3tables.py --output_dir ./outputs --exp_name exampleWithYourTimeStamp --device_index 0
+uv run python -u generate_3tables.py --output_dir ./outputs --exp_name example --device_index 0
 ```
 
 

@@ -17,7 +17,6 @@ import scanpy as sp
 
 # os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:19456"
 
-is_jupyter = False
 
 # nohup python -u deepsas_v1.py --exp_name example --device_index 3 --retrain > ./log/example.log 2>&1 &
 
@@ -43,25 +42,7 @@ parser.add_argument('--emb_size', type=int, default=12, help='Size of the embedd
 
 parser.add_argument('--batch_id', type=int, default=0, help='ID of the batch to be processed, used for batch-specific operations')
 
-if is_jupyter:
-    # Used for Jupyter environment
-    args = parser.parse_args(args=[])
-    args.exp_name = 'combined1'
-    args.output_dir=f'./outputs/'
-    args.device_index=4
-    args.retrain = True
-    args.gat_epoch=30
-    args.sencell_num=600
-    args.emb_size=32
-    args.timestamp='backbone'
-    
-    args.seed=40
-    args.n_genes='full'
-    args.ccc='type1'
-    args.gene_set='full'
-    
-else:
-    args = parser.parse_args()
+args = parser.parse_args()
     
 
 if args.timestamp == "":
@@ -72,12 +53,8 @@ if args.timestamp == "":
 
 print(vars(args))
 
-args.is_jupyter = is_jupyter
-if args.retrain:
-    args.output_dir=os.path.join(args.output_dir,f"{args.exp_name}-{args.timestamp}")
-else:
-    args.output_dir=f"./outputs/{args.exp_name}-{args.timestamp}/"   
-    print("outdir:",args.output_dir)
+
+args.output_dir=f"./outputs/{args.exp_name}"
 
 print("Outputs dir:",args.output_dir)
 

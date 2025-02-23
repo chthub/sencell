@@ -17,7 +17,6 @@ import utils
 
 matplotlib.rcParams.update({'font.family': 'Arial'})
 
-is_jupyter = True
 
 current_date = datetime.datetime.now()
 # datestamp = f"{str(current_date.year)[-2:]}-{current_date.month:02d}-{current_date.day:02d}-{current_date.hour:02d}-{current_date.minute:02d}-{current_date.second:02d}"
@@ -51,25 +50,7 @@ parser.add_argument('--emb_size', type=int, default=12, help='Size of the embedd
 
 parser.add_argument('--batch_id', type=int, default=0, help='ID of the batch to be processed, used for batch-specific operations')
 
-if is_jupyter:
-    # Used for Jupyter environment
-    args = parser.parse_args(args=[])
-    args.exp_name = 'combined1'
-    args.output_dir=f'./outputs/'
-    args.device_index=4
-    args.retrain = True
-    args.gat_epoch=30
-    args.sencell_num=600
-    args.emb_size=32
-    args.timestamp='backbone'
-    
-    args.seed=40
-    args.n_genes='full'
-    args.ccc='type1'
-    args.gene_set='full'
-    
-else:
-    args = parser.parse_args()
+args = parser.parse_args()
     
 
 if args.timestamp == "":
@@ -80,17 +61,13 @@ if args.timestamp == "":
 
 print(vars(args))
 
-args.is_jupyter = is_jupyter
-if args.retrain:
-    args.output_dir=os.path.join(args.output_dir,f"{args.exp_name}-{args.timestamp}")
-else:
-    args.output_dir=f"./outputs/{args.exp_name}-{args.timestamp}/"   
-    print("outdir:",args.output_dir)
+
+args.output_dir=f"./outputs/{args.exp_name}"
+
 
 print("Outputs dir:",args.output_dir)
 
-if not os.path.exists(args.output_dir):
-    os.makedirs(args.output_dir)
+os.makedirs(args.output_dir, exist_ok=True)
 
 # set random seed
 seed=args.seed
@@ -125,12 +102,11 @@ new_data, markers_index,\
         adata, cluster_cell_ls, cell_cluster_arr,args)
     
 # raw sene gene idx: gene name
-inital_masker = pd.DataFrame({'gene_idx': raw_sen_gene_ls, 'gene_name': list(new_data.var_names[raw_sen_gene_ls])})
+initial_marker = pd.DataFrame({'gene_idx': raw_sen_gene_ls, 'gene_name': list(new_data.var_names[raw_sen_gene_ls])})
 
-# file_path = "/bmbl_data/huchen/sencell_data1_base/outputs/data1/data1_sencellgene-epoch4base_decimal.data"
-file_path=f'./outputs/-data1/data1_sencellgene-epoch{4}.data'
-output_path='SnGs_1'
 
+file_path=os.path.join(args.output_dir, f'{args.exp_name}_sencellgene-epoch4.data')
+output_path=os.path.join(args.output_dir, 'Senescent_Tables')
 
 os.makedirs(output_path, exist_ok=True)
 
@@ -152,7 +128,7 @@ for gene_idx in sen_gene_ls:
     base_filtered_gene_names.append(new_data.var.index[int(gene_idx)])
 base_gene_idx2names = {'gene_idx': sen_gene_ls, 'gene_name': base_filtered_gene_names}
 base_gene_idx2names_df = pd.DataFrame(base_gene_idx2names)
-base_predict_sens_list = list(set(base_gene_idx2names_df['gene_name']).difference(set(inital_masker['gene_name'])))
+base_predict_sens_list = list(set(base_gene_idx2names_df['gene_name']).difference(set(initial_marker['gene_name'])))
 print(base_predict_sens_list)
 print(len(base_predict_sens_list))
 
@@ -225,7 +201,7 @@ if_senCs[[i - new_data.shape[1] for i in sencell_indexs]] = 1
 SnC_scores = pd.DataFrame({'cell_id':list(range(new_data.shape[0])), 'cell_name': new_data.obs_names, 'cell_type':new_data.obs['clusters'], 'ifSnCs': list(if_senCs), 'SnC scores': attention_s_per_cell})
 
 
-SnC_scores.to_csv(f"{output_path}/data1_Cell_Table1_SnC_scores.csv", index=False)
+SnC_scores.to_csv(f"{output_path}/Cell_Table1_SnC_scores.csv", index=False)
 new_data.obs = pd.merge(new_data.obs, SnC_scores, left_index=True, right_index=True)
 new_data.obs['ifSnCs'] = new_data.obs['ifSnCs'].astype(str)
 
@@ -272,7 +248,7 @@ merged_df = merged_df.rename(columns={'clusters': 'number_of_cells', 'sencell_cl
 merged_df = merged_df.astype(int)
 merged_df.index.name = "cell_type"
 
-merged_df.to_csv(f"{output_path}/data1_Cell_Table2_SnCs_per_ct.csv")
+merged_df.to_csv(f"{output_path}/Cell_Table2_SnCs_per_ct.csv")
 
 ct_sencell_indexs={}
 row_numbers=np.array(sencell_indexs)-new_data.shape[1]
@@ -349,7 +325,7 @@ for gene_idx in sen_gene_ls:
 ct2gene_score_df.index = sene_gene_names
 
 
-ct2gene_score_df.to_csv(f"{output_path}/data1_Gene_Table1_SnG_scores_per_ct.csv")
+ct2gene_score_df.to_csv(f"{output_path}/Gene_Table1_SnG_scores_per_ct.csv")
 
 def GeneTable2(new_data, ct2gene_score_df):
     cell_types = new_data.obs['clusters'].unique()
@@ -373,7 +349,7 @@ def GeneTable2(new_data, ct2gene_score_df):
 total_df = GeneTable2(new_data, ct2gene_score_df)
 total_df
 
-total_df.to_csv(f"{output_path}/data1_Gene_Table2_DEG_ct_SnG_score.csv", index=False)
+total_df.to_csv(f"{output_path}/Gene_Table2_DEG_ct_SnG_score.csv", index=False)
 
 # Group by 'gene' and aggregate cell_type into a list or join them
 grouped_df = total_df.groupby('gene').agg({
@@ -384,19 +360,19 @@ grouped_df = total_df.groupby('gene').agg({
     'SnG_score': 'mean'
 }).reset_index()
 
-grouped_df['hallmarker'] = grouped_df['gene'].isin(inital_masker['gene_name'])
+grouped_df['hallmarker'] = grouped_df['gene'].isin(initial_marker['gene_name'])
 
-grouped_df.to_csv(f"{output_path}/data1_Gene_Table3_gene_ct_count.csv", index=False)
+grouped_df.to_csv(f"{output_path}/Gene_Table3_gene_ct_count.csv", index=False)
 
 # Filter rows where "cell_type" column contains only one cell type
 df_filtered = grouped_df[grouped_df["cell_type"].apply(lambda x: len(x.split(",")) == 1)]
 
-df_filtered.to_csv(f"{output_path}/data1_Gene_newTable3_gene_ct_count.csv", index=False)
+df_filtered.to_csv(f"{output_path}/Gene_newTable3_gene_ct_count.csv", index=False)
 
 
 
 # generate two tables by cell type and by gene from table 2 
-df_table2=pd.read_csv(f"{output_path}/data1_Gene_Table2_DEG_ct_SnG_score.csv")
+df_table2=pd.read_csv(f"{output_path}/Gene_Table2_DEG_ct_SnG_score.csv")
 
 result_df = df_table2.groupby('cell_type')['gene'].agg(
     gene_count='count',                      # Count the number of genes per cell type
