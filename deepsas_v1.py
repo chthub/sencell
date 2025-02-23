@@ -1,20 +1,10 @@
 import numpy as np
-import seaborn as sns
 import torch
-from torch.optim.lr_scheduler import StepLR,ExponentialLR
-from torch_geometric.data import Data
-import torch.nn.functional as F
-from torch_geometric.nn import GATConv, GAE
-
-import umap
-import matplotlib.pyplot as plt
-import pandas as pd
-from torch_geometric.utils import k_hop_subgraph, to_networkx, from_networkx
-import matplotlib
+from torch.optim.lr_scheduler import ExponentialLR
 
 import utils
 from model_AE import reduction_AE
-from model_GAT import GATEncoder,GAEModel
+from model_GAT import GAEModel
 from model_Sencell import Sencell
 from model_Sencell import cell_optim, update_cell_embeddings
 
@@ -25,52 +15,45 @@ import random
 import datetime
 import scanpy as sp
 
-
-# import os
-
 # os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:19456"
 
 is_jupyter = False
-use_wandb=False
 
-datestamp='backbone'
+# nohup python -u deepsas_v1.py --exp_name example --device_index 3 --retrain > ./log/example.log 2>&1 &
 
-# nohup python -u main.py --exp_name OSU_disease_batch0 --device_index 2 --batch_id 0 --retrain > OSU_disease_batch0.log 2>&1 &
-# nohup python -u main4.py --exp_name data1 --device_index 2 --retrain > ./log/data1.log 2>&1 &
-
-parser = argparse.ArgumentParser(description='Main program for sencells')
+parser = argparse.ArgumentParser(description='DeepSAS main program for senescent cells identification')
 
 parser.add_argument('--output_dir', type=str, default='./outputs', help='')
 parser.add_argument('--exp_name', type=str, default='', help='')
 parser.add_argument('--device_index', type=int, default=0, help='')
 parser.add_argument('--retrain', action='store_true', default=False, help='')
-parser.add_argument('--timestamp', type=str,  default="", help='use default')
+parser.add_argument('--timestamp', type=str,  default="", help='Timestamp for the experiment, used for output directory naming')
 
 parser.add_argument('--seed', type=int, default=40, help='different seed for different experiments')
 parser.add_argument('--n_genes', type=str, default='full', help='set 3000, 8000 or full')
-parser.add_argument('--ccc', type=str, default='type1', help='type1: cell-cell edge with weight in 0 and 1. type2: cell-cell edge with weight in 0 to 1. type3: no cell-cell edge')
+parser.add_argument('--ccc', type=str, default='type1', help='Specify the type of cell-cell edge: type1 (binary weight between 0 and 1), type2 (continuous weight between 0 and 1), type3 (no cell-cell edge)')
 parser.add_argument('--gene_set', type=str, default='full', help='senmayo or fridman or cellage or goterm or goterm+fridman or senmayo+cellage or senmayo+fridman or senmayo+fridman+cellage or full')
 
-parser.add_argument('--gat_epoch', type=int, default=30, help='use default')
-parser.add_argument('--sencell_num', type=int, default=600, help='use default')
-parser.add_argument('--sengene_num', type=int, default=200, help='use default')
-parser.add_argument('--sencell_epoch', type=int, default=40, help='use default')
-parser.add_argument('--cell_optim_epoch', type=int, default=50, help='use default')
-parser.add_argument('--emb_size', type=int, default=12, help='use default')
+parser.add_argument('--gat_epoch', type=int, default=30, help='Number of epochs to train the Graph Attention Network (GAT) model')
+parser.add_argument('--sencell_num', type=int, default=600, help='Number of senescent cells to be used in the model')
+parser.add_argument('--sengene_num', type=int, default=200, help='Number of senescence-associated genes to be used in the model')
+parser.add_argument('--sencell_epoch', type=int, default=40, help='Number of epochs to train the Sencell model')
+parser.add_argument('--cell_optim_epoch', type=int, default=50, help='Number of epochs for optimizing cell embeddings')
+parser.add_argument('--emb_size', type=int, default=12, help='Size of the embedding vectors used in the model')
 
-parser.add_argument('--batch_id', type=int, default=0, help='use default')
+parser.add_argument('--batch_id', type=int, default=0, help='ID of the batch to be processed, used for batch-specific operations')
 
 if is_jupyter:
-    # jupyter 参数注入
+    # Used for Jupyter environment
     args = parser.parse_args(args=[])
     args.exp_name = 'combined1'
-    args.output_dir=f'/bmbl_data/chenghao/sencell/outputs/'
+    args.output_dir=f'./outputs/'
     args.device_index=4
     args.retrain = True
     args.gat_epoch=30
     args.sencell_num=600
     args.emb_size=32
-    args.timestamp=datestamp
+    args.timestamp='backbone'
     
     args.seed=40
     args.n_genes='full'
@@ -81,21 +64,21 @@ else:
     args = parser.parse_args()
     
 
-current_date = datetime.datetime.now()
-datestamp = f"{str(current_date.year)[-2:]}-{current_date.month:02d}-{current_date.day:02d}-{current_date.hour:02d}-{current_date.minute:02d}-{current_date.second:02d}"
-# args.timestamp=datestamp
-    
+if args.timestamp == "":
+    current_date = datetime.datetime.now()
+    datestamp = f"{str(current_date.year)[-2:]}-{current_date.month:02d}-{current_date.day:02d}-{current_date.hour:02d}-{current_date.minute:02d}-{current_date.second:02d}"
+    args.timestamp=datestamp
+
 
 print(vars(args))
 
 args.is_jupyter = is_jupyter
 if args.retrain:
-    args.output_dir=os.path.join(args.output_dir,f"{args.timestamp}-{args.exp_name}")
+    args.output_dir=os.path.join(args.output_dir,f"{args.exp_name}-{args.timestamp}")
 else:
-    args.output_dir=f"/bmbl_data/chenghao/sencell/outputs/{args.timestamp}-{args.exp_name}/"   
+    args.output_dir=f"./outputs/{args.exp_name}-{args.timestamp}/"   
     print("outdir:",args.output_dir)
-# else:
-#     args.output_dir=os.path.join("./outputs/23-11-28-21-45-fixbatch")
+
 print("Outputs dir:",args.output_dir)
 
 if not os.path.exists(args.output_dir):
@@ -112,18 +95,6 @@ os.environ['PYTHONHASHSEED'] = str(seed)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-if use_wandb:
-    import wandb
-    wandb.init(
-        # set the wandb project where this run will be logged
-        project="Sencell",
-        name=f"{datestamp}-{args.exp_name}",
-        # track hyperparameters and run metadata
-        config=vars(args),
-        notes=""
-    )
-else:
-    wandb=None
 
 logging.basicConfig(format='%(asctime)s.%(msecs)03d [%(levelname)s] [%(filename)s:%(lineno)d] %(message)s',
                     datefmt='# %Y-%m-%d %H:%M:%S')
@@ -132,19 +103,15 @@ logging.getLogger().setLevel(logging.INFO)
 logger = logging.getLogger()
 
 # Part 1: load and process data
-# cell_cluster_arr在画umap的时候用
+# cell_cluster_arr used in umap ploting
 logger.info("====== Part 1: load and process data ======")
-if 'combined1' in args.exp_name:
-    adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data_combined1()
+if 'data1' in args.exp_name:
+    adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data1()
 elif 'rep' in args.exp_name:
     adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data_rep(args.exp_name)
-elif 'data2' in args.exp_name:
-    adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data2()
-elif 'data1' in args.exp_name:
-    adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data1()
+elif 'example' in args.exp_name:
+    adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_example_data()
         
-# plots.umapPlot(adata.obsm['X_umap'],clusters=cell_cluster_arr,labels=celltype_names)
-
 new_data, markers_index,\
     sen_gene_ls, nonsen_gene_ls, gene_names = utils.process_data(
         adata, cluster_cell_ls, cell_cluster_arr,args)
@@ -171,10 +138,16 @@ device = torch.device(f"cuda:{args.device_index}" if torch.cuda.is_available() e
 print('device:', device)
 args.device = device
 
-def run_scanpy(adata):
+def run_scanpy(adata,batch_remove=False,batch_name='Sample'):
+    adata=adata.copy()
     sp.pp.normalize_total(adata, target_sum=1e4)
     sp.pp.log1p(adata)
     sp.pp.scale(adata, max_value=10)
+    if batch_remove:
+        print('Start remove batch effect, the default batch annotation in adata.obs["Sample"] ...')
+        sp.pp.combat(adata, key=batch_name)
+    else:
+        print('Do not remove batch effect ...')
     sp.tl.pca(adata, svd_solver='arpack')
     sp.pp.neighbors(adata, n_neighbors=10, n_pcs=40)
     sp.tl.umap(adata,n_components=args.emb_size)
@@ -208,7 +181,7 @@ if use_autoencoder:
         
 else:
     if args.retrain:
-        cell_embed=run_scanpy(new_data.copy())
+        cell_embed=run_scanpy(new_data.copy(),batch_remove=True)
         print('cell embedding generated!')
         gene_embed=run_scanpy(new_data.copy().T)
         print('gene embedding generated!')
@@ -409,7 +382,8 @@ def generate_ct_specific_scores(sen_gene_ls,gene_cell,edge_index_selfloop,
 
     for cell_index in range(gene_cell.shape[0],gene_cell.shape[0]+gene_cell.shape[1]):
         connected_genes=edge_index_selfloop[0][edge_index_selfloop[1] == cell_index]
-        # 这里要考虑到如果cell没有任何老化基因表达，score设为0，pytorch会将其计算为nan，需要额外处理
+        # Consider that if the cell does not express any senescence-associated genes, 
+        # set the score to 0, otherwise PyTorch will calculate it as NaN, which requires additional handling
         if len(connected_genes[gene_mask[connected_genes]])==0:
             print('no sengene in this cell!')
             # res.append(torch.tensor(0))
@@ -529,8 +503,7 @@ for epoch in range(5):
                                                             sencell_dict, nonsencell_dict,
                                                             None,
                                                             args,
-                                                            train=True,
-                                                            wandb=wandb)
+                                                            train=True)
     scheduler.step()
     current_lr = optimizer.param_groups[0]['lr']
     print('current lr:',current_lr)

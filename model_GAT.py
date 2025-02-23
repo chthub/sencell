@@ -9,8 +9,7 @@ from torch.nn import Linear, ReLU, Dropout
 from torch_geometric.nn.models import InnerProductDecoder, GAE, VGAE
 from torch_geometric.nn import GATConv, GAE
 
-
-from sampling import sub_sampling_GAT
+# from sampling import sub_sampling_GAT
 from tqdm import tqdm
 
 import os
@@ -50,8 +49,8 @@ class Encoder(torch.nn.Module):
         self.linear1 = Linear(dim, dim)
         self.linear2 = Linear(dim, dim)
 
-        # 默认有自环，所以attention里面也有自环的attention
-        # 为了后面的处理，这里去掉自环
+        # self loop is default，so also include the attention of self-loop
+        # delete self loop
         self.conv1 = GATConv(dim, dim, add_self_loops=False)
         self.conv2 = GATConv(dim, dim, add_self_loops=False)
         
@@ -119,7 +118,7 @@ class SenGAE(GAE):
 
 
 def sampling_jobs_seq(graph_nx, graph, args):
-    # 采样串行
+    # Sampling serial version
     t0 = time.time()
     num_subgraphs = 50
     jobs = []
@@ -140,8 +139,8 @@ def sampling_jobs_seq(graph_nx, graph, args):
 
 def sampling_jobs_par(graph_nx, graph, args):
     from multiprocessing import Pool
-    # 采样并行，多进程版
-    # 并行版本报错，未解决
+    # Parallel sampling, multi-process version
+    # Parallel version reports an error, unresolved
     t0 = time.time()
     num_subgraphs = 50
     jobs = []
@@ -160,7 +159,7 @@ def sampling_jobs_par(graph_nx, graph, args):
     return jobs
 
 
-def train_GAT(graph_nx, graph, args, retrain=False, resampling=False,wandb=None):
+def train_GAT(graph_nx, graph, args, retrain=False, resampling=False):
     # step 1: init model
     model = SenGAE().to(args.device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001,
@@ -177,7 +176,7 @@ def train_GAT(graph_nx, graph, args, retrain=False, resampling=False,wandb=None)
             args.output_dir, f'{args.exp_name}_gat.pt'))
         return model
 
-    # step 3: 子图采样
+    # step 3: subgraph sampling
     if resampling:
         jobs = sampling_jobs_seq(graph_nx, graph, args)
         torch.save(jobs, os.path.join(
@@ -204,8 +203,6 @@ def train_GAT(graph_nx, graph, args, retrain=False, resampling=False,wandb=None)
             subgraph_loss = np.mean(loss_ls)
             epoch_ls.append(subgraph_loss)
             print('subgraph loss: ', subgraph_loss)
-            if wandb is not None:
-                wandb.log({"subgraph loss":loss})
     #         scheduler.step(subgraph_loss)
         print('EPOCH loss', np.mean(epoch_ls))
 
@@ -214,7 +211,7 @@ def train_GAT(graph_nx, graph, args, retrain=False, resampling=False,wandb=None)
 
 
 def train_GAT_new(graph_nx, graph, args, retrain=False, resampling=False):
-    # 不采样了，直接训练整个图
+    # train on the whole graph directly
     # CUDA out of memory
     # step 1: init model
     model = SenGAE().to(args.device)

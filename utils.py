@@ -12,223 +12,29 @@ import scipy
 from scipy import sparse as scsp
 
 
-def load_data_combined1(path="./data/sub_combined.h5ad"):
-    print("load_data_combined1 ...")
-    adata = sp.read_h5ad(path)
-    
-    print(f"genes: {adata.shape[1]}, cells:{adata.shape[0]}")
-    
-    sp.pp.filter_cells(adata, min_genes=200)
-    sp.pp.filter_genes(adata, min_cells=3)
 
-    celltype_names=list(adata.obs['Rationale_based_annotation_update'].value_counts().index)
-
-    print("The number of cell types", len(celltype_names))
-    print("celltype names:", celltype_names)
-    # 2d-list, 存储每个cluster里面包含的cell index
-    cluster_cell_ls = []
-    # 1d-array，存储每个cell的cluster index
-    cell_cluster_arr = np.array([0]*adata.shape[0])
-    # 所有cell的index
-    all_indexs = np.arange(adata.shape[0])
-    for i, celltype_name in enumerate(celltype_names):
-        cell_indexs = all_indexs[adata.obs['Rationale_based_annotation_update']
-                                 == celltype_name]
-        cluster_cell_ls.append(cell_indexs)
-        cell_cluster_arr[cell_indexs] = i
-
-    outputs = [[celltype_names[i], len(j)]
-               for i, j in enumerate(cluster_cell_ls)]
-    print(tabulate(outputs))
-    return adata, cluster_cell_ls, cell_cluster_arr, celltype_names
-
-
-def load_data_combined2(path="./data/combined_part2.h5ad"):
-    print("load_data_combined2 ...")
-    adata = sp.read_h5ad(path)
-    
-    print(f"genes: {adata.shape[1]}, cells:{adata.shape[0]}")
-
-    
-    sp.pp.filter_cells(adata, min_genes=200)
-    sp.pp.filter_genes(adata, min_cells=3)
-
-    celltype_names=list(adata.obs['Rationale_based_annotation_update'].value_counts().index)
-
-    print("The number of cell types", len(celltype_names))
-    print("celltype names:", celltype_names)
-    # 2d-list, 存储每个cluster里面包含的cell index
-    cluster_cell_ls = []
-    # 1d-array，存储每个cell的cluster index
-    cell_cluster_arr = np.array([0]*adata.shape[0])
-    # 所有cell的index
-    all_indexs = np.arange(adata.shape[0])
-    for i, celltype_name in enumerate(celltype_names):
-        cell_indexs = all_indexs[adata.obs['Rationale_based_annotation_update']
-                                 == celltype_name]
-        cluster_cell_ls.append(cell_indexs)
-        cell_cluster_arr[cell_indexs] = i
-
-    outputs = [[celltype_names[i], len(j)]
-               for i, j in enumerate(cluster_cell_ls)]
-    print(tabulate(outputs))
-    return adata, cluster_cell_ls, cell_cluster_arr, celltype_names
-
-def load_data_combined3(path="./data/combined_part3.h5ad"):
-    print("load_data_combined3 ...")
-    adata = sp.read_h5ad(path)
-    
-    print(f"genes: {adata.shape[1]}, cells:{adata.shape[0]}")
-
-    
-    sp.pp.filter_cells(adata, min_genes=200)
-    sp.pp.filter_genes(adata, min_cells=3)
-
-    celltype_names=list(adata.obs['Rationale_based_annotation_update'].value_counts().index)
-
-    print("The number of cell types", len(celltype_names))
-    print("celltype names:", celltype_names)
-    # 2d-list, 存储每个cluster里面包含的cell index
-    cluster_cell_ls = []
-    # 1d-array，存储每个cell的cluster index
-    cell_cluster_arr = np.array([0]*adata.shape[0])
-    # 所有cell的index
-    all_indexs = np.arange(adata.shape[0])
-    for i, celltype_name in enumerate(celltype_names):
-        cell_indexs = all_indexs[adata.obs['Rationale_based_annotation_update']
-                                 == celltype_name]
-        cluster_cell_ls.append(cell_indexs)
-        cell_cluster_arr[cell_indexs] = i
-
-    outputs = [[celltype_names[i], len(j)]
-               for i, j in enumerate(cluster_cell_ls)]
-    print(tabulate(outputs))
-    return adata, cluster_cell_ls, cell_cluster_arr, celltype_names
-
-
-
-def load_data_fixRNA(path="/bmbl_data/chenghao/sencell/fixRNA_annotated.h5ad"):
-    print("load_data_fixRNA ...")
-    adata = sp.read_h5ad(path)
-    
-    scipy_matrix=scsp.csr_matrix(adata.layers['raw_counts'])
-    adata.X=scipy_matrix
-    
-    # filter less than 100 cells
-    # Step 1: Count the number of cells in each cell type
-    cell_type_counts = adata.obs['hlca_update'].value_counts()
-
-    # Step 2: Identify cell types with 100 or more cells
-    cell_types_to_keep = cell_type_counts[cell_type_counts >= 100].index
-    # Step 3: Filter the adata object to keep only the desired cell types
-    adata = adata[adata.obs['hlca_update'].isin(cell_types_to_keep)]
-
-    print("After filter ...")
-    
-    # adata = adata[adata.obs['disease_update'] == 'Healthy']
-    celltype_names=list(adata.obs['hlca_update'].value_counts().index)
-
-    print("The number of cell types", len(celltype_names))
-    print("celltype names:", celltype_names)
-    # 2d-list, 存储每个cluster里面包含的cell index
-    cluster_cell_ls = []
-    # 1d-array，存储每个cell的cluster index
-    cell_cluster_arr = np.array([0]*adata.shape[0])
-    # 所有cell的index
-    all_indexs = np.arange(adata.shape[0])
-    for i, celltype_name in enumerate(celltype_names):
-        cell_indexs = all_indexs[adata.obs['hlca_update']
-                                 == celltype_name]
-        cluster_cell_ls.append(cell_indexs)
-        cell_cluster_arr[cell_indexs] = i
-
-    outputs = [[celltype_names[i], len(j)]
-               for i, j in enumerate(cluster_cell_ls)]
-    print(tabulate(outputs))
-    return adata, cluster_cell_ls, cell_cluster_arr, celltype_names
-
-
-def load_data_mouse(path="/bmbl_data/chenghao/sencell/data/mouse/high/data.h5ad"):
-    print("load_data_mouse ...")
-    adata = sp.read_h5ad(path)
-    
-    celltype_names=list(adata.obs['cell_type'].value_counts().index)
-
-    print("The number of cell types", len(celltype_names))
-    print("celltype names:", celltype_names)
-    # 2d-list, 存储每个cluster里面包含的cell index
-    cluster_cell_ls = []
-    # 1d-array，存储每个cell的cluster index
-    cell_cluster_arr = np.array([0]*adata.shape[0])
-    # 所有cell的index
-    all_indexs = np.arange(adata.shape[0])
-    for i, celltype_name in enumerate(celltype_names):
-        cell_indexs = all_indexs[adata.obs['cell_type']
-                                 == celltype_name]
-        cluster_cell_ls.append(cell_indexs)
-        cell_cluster_arr[cell_indexs] = i
-
-    outputs = [[celltype_names[i], len(j)]
-               for i, j in enumerate(cluster_cell_ls)]
-    print(tabulate(outputs))
-    return adata, cluster_cell_ls, cell_cluster_arr, celltype_names
-
-
-def load_data_newfix(path="/bmbl_data/chenghao/sencell/fixed_data_0525.h5ad"):
-    # "/bmbl_data/chenghao/sencell/fixed_data_0520.h5ad", 7w cells
-    print("load_data_newfix ...")
+def load_example_data(path="example_data/example_data.h5ad",
+                      ct_name='clusters'):
+    print("Load example data ...")
     adata = sp.read_h5ad(path)
     
     sp.pp.filter_cells(adata, min_genes=200)
     sp.pp.filter_genes(adata, min_cells=10)
 
-    print(f'Number of cells: {adata.shape[0]}\nNumber of genes: {adata.shape[1]}')
+    print(f'\tNumber of cells: {adata.shape[0]}\n\tNumber of genes: {adata.shape[1]}')
     
-    celltype_names=list(adata.obs['clusters'].value_counts().index)
+    celltype_names=list(adata.obs[ct_name].value_counts().index)
 
     print("The number of cell types", len(celltype_names))
-    print("celltype names:", celltype_names)
-    # 2d-list, 存储每个cluster里面包含的cell index
+    print("Cell type names:", celltype_names)
+    # 2d-list, include the cell index in each cluster
     cluster_cell_ls = []
-    # 1d-array，存储每个cell的cluster index
+    # 1d-array，include the cluster index of each cell
     cell_cluster_arr = np.array([0]*adata.shape[0])
-    # 所有cell的index
+    # all cell index
     all_indexs = np.arange(adata.shape[0])
     for i, celltype_name in enumerate(celltype_names):
-        cell_indexs = all_indexs[adata.obs['clusters']
-                                 == celltype_name]
-        cluster_cell_ls.append(cell_indexs)
-        cell_cluster_arr[cell_indexs] = i
-
-    outputs = [[celltype_names[i], len(j)]
-               for i, j in enumerate(cluster_cell_ls)]
-    print(tabulate(outputs))
-    return adata, cluster_cell_ls, cell_cluster_arr, celltype_names
-
-
-
-def load_data2(path="/bmbl_data/chenghao/U54/deepSAS_data2.h5ad"):
-    # "/bmbl_data/chenghao/sencell/fixed_data_0520.h5ad", 7w cells
-    print("load_data2 ...")
-    adata = sp.read_h5ad(path)
-    
-    sp.pp.filter_cells(adata, min_genes=200)
-    sp.pp.filter_genes(adata, min_cells=10)
-
-    print(f'Number of cells: {adata.shape[0]}\nNumber of genes: {adata.shape[1]}')
-    
-    celltype_names=list(adata.obs['ct'].value_counts().index)
-
-    print("The number of cell types", len(celltype_names))
-    print("celltype names:", celltype_names)
-    # 2d-list, 存储每个cluster里面包含的cell index
-    cluster_cell_ls = []
-    # 1d-array，存储每个cell的cluster index
-    cell_cluster_arr = np.array([0]*adata.shape[0])
-    # 所有cell的index
-    all_indexs = np.arange(adata.shape[0])
-    for i, celltype_name in enumerate(celltype_names):
-        cell_indexs = all_indexs[adata.obs['ct']
+        cell_indexs = all_indexs[adata.obs[ct_name]
                                  == celltype_name]
         cluster_cell_ls.append(cell_indexs)
         cell_cluster_arr[cell_indexs] = i
@@ -255,11 +61,11 @@ def load_data_rep(exp_name):
 
     print("The number of cell types", len(celltype_names))
     print("celltype names:", celltype_names)
-    # 2d-list, 存储每个cluster里面包含的cell index
+    # 2d-list, include the cell index in each cluster
     cluster_cell_ls = []
-    # 1d-array，存储每个cell的cluster index
+    # 1d-array，include the cluster index of each cell
     cell_cluster_arr = np.array([0]*adata.shape[0])
-    # 所有cell的index
+    # all cell index
     all_indexs = np.arange(adata.shape[0])
     for i, celltype_name in enumerate(celltype_names):
         cell_indexs = all_indexs[adata.obs[ct_name]
@@ -284,16 +90,16 @@ def load_data1(path="/bmbl_data/huchen/deepSAS_data/new_anno_data1.h5ad"):
     sp.pp.filter_genes(adata, min_cells=10)
 
     print(f'Number of cells: {adata.shape[0]}\nNumber of genes: {adata.shape[1]}')
-    
+
     celltype_names=list(adata.obs[ct_name].value_counts().index)
 
     print("The number of cell types", len(celltype_names))
     print("celltype names:", celltype_names)
-    # 2d-list, 存储每个cluster里面包含的cell index
+    # 2d-list, include the cell index in each cluster
     cluster_cell_ls = []
-    # 1d-array，存储每个cell的cluster index
+    # 1d-array，include the cluster index of each cell
     cell_cluster_arr = np.array([0]*adata.shape[0])
-    # 所有cell的index
+    # all cell index
     all_indexs = np.arange(adata.shape[0])
     for i, celltype_name in enumerate(celltype_names):
         cell_indexs = all_indexs[adata.obs[ct_name]
@@ -342,7 +148,7 @@ def load_markers(args):
     markers6 = get_cellcyle_markers()
     markers_ls.append(markers6)
 
-    print('各marker list所包含的gene数：')
+    print('The number of genes in marker list：')
     # print(tabulate([["SenMayo", "FRIDMAN", "CellAge", "GO","L-R Markers","Cell Cycle Markers"],
     #                 [len(markers_ls[0]), len(markers_ls[1]), len(markers_ls[2]), len(markers_ls[3]),len(markers_ls[4]),len(markers_ls[5])]],
     #                headers="firstrow"))
@@ -398,7 +204,7 @@ def combine_genes(adata, markers_ls, args):
     markers_set = set([gene for markers in markers_ls for gene in markers])
     print('Total marker genes: ', len(markers_set))
 
-    # 使用highly_genes
+    # use highly_genes
     # adata.X = scipy.sparse.csr_matrix(adata.X)
     if args.n_genes=='full':
         print("use all genes!")
@@ -408,16 +214,15 @@ def combine_genes(adata, markers_ls, args):
         highly_genes = get_highly_genes(adata,int(args.n_genes))
         print('Highly genes num: ', len(highly_genes))
     
-    # 使用全部基因
-    # 全部基因会导致整个图太大，会大幅降低运行效率
+    # use all genes
     # highly_genes=list(adata.var.index)
 
-    # 去除其中的老化基因，然后再把老化基因append到最后
+    # remove senescent genes and append them to the end
     highly_genes = sorted(list(set(highly_genes)-markers_set))
     print('After genes dropped duplicated sengenes: ', len(highly_genes))
 
-    # 这里有要注意的地方，有可能老化基因在所有cell里面都是0表达
-    # 所以这里要加一步去除0表达的基因
+    # Note: It is possible that senescent genes are not expressed in any cells
+    # Therefore, add a step to remove genes with zero expression
     sen_gene_ls = []
     # cell_gene = adata.X.toarray()
     if scsp.issparse(adata.X):
@@ -432,7 +237,7 @@ def combine_genes(adata, markers_ls, args):
             if max(cell_gene[:, gene_index]) != 0:
                 sen_gene_ls.append(gene)
 
-    # highly gene也有可能出现全0的情况
+    # highly gene may have zero expression in all cells
     filtered_highly_genes = []
     for gene in highly_genes:
         if gene in gene_names:
@@ -441,21 +246,21 @@ def combine_genes(adata, markers_ls, args):
                 filtered_highly_genes.append(gene)
 
     if len(filtered_highly_genes) != len(highly_genes):
-        print("Highly genes里面有全0！！")
+        print("Highly genes have zero expression in all cells！！")
 
     # combine them all
     sen_gene_ls = sorted(sen_gene_ls)
     gene_names = filtered_highly_genes+sen_gene_ls
     print('Total gene num:', len(gene_names))
 
-    # 选择adata的一个子集
+    # subset adata
     adata_gene_names = list(adata.var.index)
     gene_indexs = [adata_gene_names.index(name) for name in gene_names]
     new_data = adata[:, gene_indexs]
 
     assert gene_names[100] == new_data.var.index[100], "Bug!!!"
-    # 得到每个marker list里面marker的index
-    # markers_index有重叠
+    # Get the index of each marker in the marker list
+    # markers_index has overlap
     markers_index = []
     for markers in markers_ls:
         indexs = []
@@ -463,8 +268,8 @@ def combine_genes(adata, markers_ls, args):
             if marker in gene_names:
                 indexs.append(gene_names.index(marker))
         markers_index.append(indexs)
-    # 得到markers_index，包含4个list，是marker在genes里面的index
-    # 所有marker的index
+    # Get markers_index, which contains 4 lists, which are the indexes of markers in genes
+    # the index of all markers
     sen_gene_ls = [gene_names.index(i) for i in sen_gene_ls]
     nonsen_gene_ls = [gene_names.index(i) for i in filtered_highly_genes]
     return new_data, markers_index, sen_gene_ls, nonsen_gene_ls, gene_names
@@ -482,10 +287,9 @@ def process_data(adata, cluster_cell_ls, cell_cluster_arr,args):
 
 def build_graph_nx(adata,gene_cell, cell_cluster_arr, sen_gene_ls, nonsen_gene_ls, gene_names,args):
     # build nx graph and pyg graph
-    # step 1: 计算edge index
+    # step 1: Calculate edge index
     g_index, c_index = np.nonzero(gene_cell)
     print('Cell-gene graph, the number of edges:', len(g_index))
-    # 加上偏移量作为cell的节点标号
     gene_num = gene_cell.shape[0]
     c_index += gene_num
     if args.ccc=='type1':
@@ -517,7 +321,7 @@ def build_graph_nx(adata,gene_cell, cell_cluster_arr, sen_gene_ls, nonsen_gene_l
     # step 2: build nx graph, add attributes
     graph_nx = nx.Graph(edge_index.T.tolist())
 
-    # 再加一个属性，是每个节点在大图上的index
+    # Add another attribute, which is the index of each node in the big graph
     for i in range(gene_num):
         graph_nx.nodes[i]['type'] = 'g'
         graph_nx.nodes[i]['index'] = i
@@ -546,7 +350,7 @@ def add_nx_embedding(graph_nx, gene_embed, cell_embed):
 
 def build_graph_pyg(gene_cell, gene_embed, cell_embed,edge_indexs,ccc_matrix):
     print("build graph pyg")
-    # 代表节点的类别
+    # Represents the node type
     y = [True]*gene_cell.shape[0]+[False]*gene_cell.shape[1]
     y = torch.tensor(y)
 

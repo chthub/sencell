@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 
 def get_cluster_cell_dict(sencell_dict, nonsencell_dict):
-    # 计算cluster所包含的cell的映射表
+    # Calculate the mapping table of cells contained in the cluster
     # {cluster: [cell_indexs]}
     cluster_sencell = defaultdict(list)
     cluster_nonsencell = defaultdict(list)
@@ -28,7 +28,7 @@ def get_cluster_cell_dict(sencell_dict, nonsencell_dict):
 
 
 def getPrototypeEmb(sencell_dict, cluster_sencell, emb_pos=2):
-    # 计算prototype的embedding，只计算老化细胞的prototype
+    # Calculate the prototype embedding, only the prototype of sen cells is calculated
     prototype_emb = {}
     for key, value in cluster_sencell.items():
         embs = []
@@ -125,13 +125,13 @@ class Sencell(torch.nn.Module):
         return results/len(distances)
 
     def eucliDistance(self, v1, v2):
-        # 计算欧氏距离
+        # Calculate Euclidean distance
         return F.pairwise_distance(v1.view(1, -1), v2.view(1, -1), p=2)
 
     def get_d1(self, sencell_dict, cluster_sencell, prototype_emb, emb_pos=2):
         d1 = []
         for cluster, prototype in prototype_emb.items():
-            # 对于只有一个老化细胞的情况，distance就是0，但是显示1.1314e-05
+            # For the case where there is only one sen cell, the distance is 0, but it is displayed as 1.1314e-05
             distance_ls = []
             for cell_index in cluster_sencell[cluster]:
                 cell_emb = sencell_dict[cell_index][emb_pos]
@@ -142,7 +142,7 @@ class Sencell(torch.nn.Module):
         return d1
 
     def get_d2(self, sencell_dict, cluster_sencell, prototype_emb, emb_pos=2):
-        # d2表示不同簇的老化细胞之间的距离
+        # d2 represents the distance between sen cells in different clusters
         d2 = []
         for cluster, prototype in prototype_emb.items():
             distance_ls = []
@@ -156,17 +156,17 @@ class Sencell(torch.nn.Module):
         return d2
 
     def get_d3(self, nonsencell_dict, cluster_nonsencell, prototype_emb, emb_pos=2):
-        # d3表示同一细胞类型内部老化细胞和非老化细胞之间的距离
+        # d3 represents the distance between senescent cells and non-senescent cells within the same cell type
         d3 = []
         for cluster, prototype in prototype_emb.items():
             distance_ls = []
             if cluster not in cluster_nonsencell:
-                # 这是我们要避免出现的情况
-                # 这是一种特殊情况要单独处理，如果没有非老化细胞，就没有必要优化d3了
-                # 这里有两种解决方法，一种是直接d3.append([])，但这样需要后续的逻辑考虑到这种情况
-                # 另一种方法是在前面采样的时候就避免出现某一簇没有非老化细胞的情况
-                # 这个问题先一放
-                print("这一簇没有非老化细胞：", cluster)
+                # This is the situation we want to avoid
+                # This is a special case that needs to be handled separately. If there are no non-sen cells, there is no need to optimize d3
+                # There are two solutions here. One is to directly d3.append([]), but this requires subsequent logic to take this situation into account
+                # Another way is to avoid the situation where a cluster has no non-sen cells when sampling in the front
+                # Let's put this problem aside for now
+                print("There is no snc in this cluster：", cluster)
                 distance_ls.append(torch.tensor([0.75]).to(self.device))
             else:
                 for nonsencell_index in cluster_nonsencell[cluster]:
@@ -177,7 +177,7 @@ class Sencell(torch.nn.Module):
         return d3
 
     def get_d4(self, nonsencell_dict, cluster_nonsencell, prototype_emb, emb_pos=2):
-        # d4表示不同细胞类型之间，老化和非老化之间的距离
+        # d4 represents the distance between different cell types, between snc and non-snc
         d4 = []
         for cluster, prototype in prototype_emb.items():
             distance_ls = []
@@ -194,15 +194,15 @@ class Sencell(torch.nn.Module):
     def caculateDistance(self, sencell_dict, nonsencell_dict,
                          cluster_sencell, cluster_nonsencell,
                          prototype_emb, emb_pos=2):
-        # d1: 老化细胞簇内prototype和每个cell之间的距离
-        # 对于每个拥有老化细胞的cluster，都会有d1
+        # d1: The distance between the prototype and each cell in the sen cell cluster
+        # For each cluster with sen cells, there will be d1
         d1 = self.get_d1(sencell_dict, cluster_sencell, prototype_emb, emb_pos)
-        # d2表示不同簇的老化细胞之间的距离
+        # d2 represents the distance between sen cells in different clusters
         d2 = self.get_d2(sencell_dict, cluster_sencell, prototype_emb, emb_pos)
-        # d3表示同一细胞类型内部老化细胞和非老化细胞之间的距离
+        # d3 represents the distance between sen cells and non-sen cells within the same cell type
         d3 = self.get_d3(nonsencell_dict, cluster_nonsencell,
                          prototype_emb, emb_pos)
-        # d4表示不同细胞类型之间，老化和非老化之间的距离
+        # d4 represents the distance between different cell types, between sen and non-sen
         # d4 = self.get_d4(nonsencell_dict, cluster_nonsencell,
         #                  prototype_emb, emb_pos)
         return d1, d2, d3
@@ -212,7 +212,7 @@ class Sencell(torch.nn.Module):
         result = 0
 
         def distanceDiff(cluster_d, level):
-            # cluster_d是同一cluster的同一类型的distance的列表
+            # cluster_d is a list of distances of the same type in the same cluster
             count = 0
             result = 0
             for d in cluster_d:
@@ -231,16 +231,16 @@ class Sencell(torch.nn.Module):
         return result
 
     def loss(self, sencell_dict, nonsencell_dict):
-        # step 1: 计算cluster和cell的映射表
+        # step 1: Calculate the mapping table of cluster and cell
         cluster_sencell, cluster_nonsencell = get_cluster_cell_dict(
             sencell_dict, nonsencell_dict)
-        # step 2: 计算老化细胞簇的prototype embedding
+        # step 2: Calculate prototype embedding of sen cell clusters
         prototype_emb = getPrototypeEmb(sencell_dict, cluster_sencell)
-        # step 3: 计算不同的distance
+        # step 3: Calculate distance
         distances = self.caculateDistance(sencell_dict, nonsencell_dict,
                                           cluster_sencell, cluster_nonsencell,
                                           prototype_emb)
-        # step 4: 计算multi-level distance
+        # step 4: Calculate multi-level distance
         loss = self.getMultiLevelDistanceLoss(distances)
 
         return loss
@@ -259,7 +259,7 @@ def process_dict(cell_dict,dgl_graph,args):
     return cell_dict
 
 
-def cell_optim(cellmodel, optimizer, sencell_dict, nonsencell_dict,dgl_graph, args, train=False,wandb=None):
+def cell_optim(cellmodel, optimizer, sencell_dict, nonsencell_dict,dgl_graph, args, train=False):
     # optimizer = torch.optim.RMSprop(cellmodel.parameters(), lr=0.1, alpha=0.5,
     #                                 weight_decay=1e-4)
     if train:
@@ -273,8 +273,6 @@ def cell_optim(cellmodel, optimizer, sencell_dict, nonsencell_dict,dgl_graph, ar
                 sencell_dict, nonsencell_dict, args.device)
             loss = cellmodel.loss(sencell_dict, nonsencell_dict)
             print(loss.item())
-            if wandb is not None:
-                wandb.log({"loss":loss})
             loss.backward()
             optimizer.step()
 
