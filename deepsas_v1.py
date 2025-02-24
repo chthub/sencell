@@ -22,6 +22,7 @@ import scanpy as sp
 
 parser = argparse.ArgumentParser(description='DeepSAS main program for senescent cells identification')
 
+parser.add_argument('--input_data_count', type=str, default="/bmbl_data/huchen/deepSAS_data/fixed_data_0525.h5ad", help='it is a path to a adata object (.h5ad)')
 parser.add_argument('--output_dir', type=str, default='./outputs', help='')
 parser.add_argument('--exp_name', type=str, default='', help='')
 parser.add_argument('--device_index', type=int, default=0, help='')
@@ -88,6 +89,8 @@ elif 'rep' in args.exp_name:
     adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data_rep(args.exp_name)
 elif 'example' in args.exp_name:
     adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_example_data()
+else:
+    adata, cluster_cell_ls, cell_cluster_arr, celltype_names = utils.load_data1(args.input_data_count)
         
 new_data, markers_index,\
     sen_gene_ls, nonsen_gene_ls, gene_names = utils.process_data(
