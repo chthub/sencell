@@ -13,7 +13,7 @@ do
     EXP_NAME="Data_${i}_013025"
     
     # Run your command (replace `your_command` with the actual command you want to execute)
-    python main4.py --input_data_count "$FILE_PATH" --output_dir ./outputs --exp_name "$FILE_PATH" --device_index 4 --timestamp '013025' --retrain
+    uv run python -u deepsas_v1.py --input_data_count "$FILE_PATH" --output_dir ./outputs --exp_name "$FILE_PATH" --device_index 4 --timestamp '013025' --retrain
 
     # Print (optional, for debugging)
     echo "Processing file: $FILE_PATH with experiment name: $EXP_NAME"
