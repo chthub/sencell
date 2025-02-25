@@ -10,53 +10,14 @@ from model_Sencell import cell_optim, update_cell_embeddings
 
 import logging
 import os
-import argparse
 import random
 import datetime
 import scanpy as sp
 
-# os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:19456"
-
-
-# nohup python -u deepsas_v1.py --exp_name example --device_index 3 --retrain > ./log/example.log 2>&1 &
-
-parser = argparse.ArgumentParser(description='DeepSAS main program for senescent cells identification')
-
-parser.add_argument('--input_data_count', type=str, default="/bmbl_data/huchen/deepSAS_data/fixed_data_0525.h5ad", help='it is a path to a adata object (.h5ad)')
-parser.add_argument('--output_dir', type=str, default='./outputs', help='')
-parser.add_argument('--exp_name', type=str, default='', help='')
-parser.add_argument('--device_index', type=int, default=0, help='')
-parser.add_argument('--retrain', action='store_true', default=False, help='')
-parser.add_argument('--timestamp', type=str,  default="", help='Timestamp for the experiment, used for output directory naming')
-
-parser.add_argument('--seed', type=int, default=40, help='different seed for different experiments')
-parser.add_argument('--n_genes', type=str, default='full', help='set 3000, 8000 or full')
-parser.add_argument('--ccc', type=str, default='type1', help='Specify the type of cell-cell edge: type1 (binary weight between 0 and 1), type2 (continuous weight between 0 and 1), type3 (no cell-cell edge)')
-parser.add_argument('--gene_set', type=str, default='full', help='senmayo or fridman or cellage or goterm or goterm+fridman or senmayo+cellage or senmayo+fridman or senmayo+fridman+cellage or full')
-
-parser.add_argument('--gat_epoch', type=int, default=30, help='Number of epochs to train the Graph Attention Network (GAT) model')
-parser.add_argument('--sencell_num', type=int, default=600, help='Number of senescent cells to be used in the model')
-parser.add_argument('--sengene_num', type=int, default=200, help='Number of senescence-associated genes to be used in the model')
-parser.add_argument('--sencell_epoch', type=int, default=40, help='Number of epochs to train the Sencell model')
-parser.add_argument('--cell_optim_epoch', type=int, default=50, help='Number of epochs for optimizing cell embeddings')
-parser.add_argument('--emb_size', type=int, default=12, help='Size of the embedding vectors used in the model')
-
-parser.add_argument('--batch_id', type=int, default=0, help='ID of the batch to be processed, used for batch-specific operations')
-
-args = parser.parse_args()
-    
-
-if args.timestamp == "":
-    current_date = datetime.datetime.now()
-    datestamp = f"{str(current_date.year)[-2:]}-{current_date.month:02d}-{current_date.day:02d}-{current_date.hour:02d}-{current_date.minute:02d}-{current_date.second:02d}"
-    args.timestamp=datestamp
-
-
+args = utils.parse_args()
 print(vars(args))
 
-
 args.output_dir=f"./outputs/{args.exp_name}"
-
 print("Outputs dir:",args.output_dir)
 
 if not os.path.exists(args.output_dir):
@@ -72,7 +33,6 @@ random.seed(seed)
 os.environ['PYTHONHASHSEED'] = str(seed)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
-
 
 logging.basicConfig(format='%(asctime)s.%(msecs)03d [%(levelname)s] [%(filename)s:%(lineno)d] %(message)s',
                     datefmt='# %Y-%m-%d %H:%M:%S')

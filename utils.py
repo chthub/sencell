@@ -7,9 +7,69 @@ from torch_geometric.data import Data as Graphdata
 from torch_geometric.utils import to_undirected
 import networkx as nx
 from tabulate import tabulate
-# import dgl
-import scipy
 from scipy import sparse as scsp
+
+import argparse
+
+
+def parse_args():
+    """Parse and validate command line arguments."""
+    parser = argparse.ArgumentParser(description='DeepSAS main program for senescent cells identification')
+
+    # Input/output arguments
+    parser.add_argument('--input_data_count', type=str, 
+                       default="/bmbl_data/huchen/deepSAS_data/fixed_data_0525.h5ad", 
+                       help='Path to input data (h5ad format)')
+    parser.add_argument('--output_dir', type=str, default='./outputs', 
+                       help='Base output directory')
+    parser.add_argument('--exp_name', type=str, required=True,
+                       help='Experiment name (used for output directory naming)')
+    parser.add_argument('--device_index', type=int, default=0, 
+                       help='CUDA device index to use')
+    parser.add_argument('--retrain', action='store_true', default=False, 
+                       help='Whether to retrain models or use saved ones')
+    parser.add_argument('--timestamp', type=str, default="", 
+                       help='Timestamp for the experiment, used for output directory naming')
+
+    # Model configuration arguments
+    parser.add_argument('--seed', type=int, default=40, 
+                       help='Random seed for reproducibility')
+    parser.add_argument('--n_genes', type=str, default='full', 
+                       help='Number of genes to use (3000, 8000 or full)')
+    parser.add_argument('--ccc', type=str, default='type1', 
+                       help='Cell-cell edge type: type1 (binary), type2 (continuous), type3 (none)')
+    parser.add_argument('--gene_set', type=str, default='full', 
+                       help='Gene set to use (senmayo, fridman, etc.)')
+    parser.add_argument('--emb_size', type=int, default=12, 
+                       help='Embedding dimension size')
+
+    # Training parameters
+    parser.add_argument('--gat_epoch', type=int, default=30, 
+                       help='Number of epochs to train the GAT model')
+    parser.add_argument('--sencell_num', type=int, default=600, 
+                       help='Number of senescent cells to use')
+    parser.add_argument('--sengene_num', type=int, default=200, 
+                       help='Number of senescence-associated genes to use')
+    parser.add_argument('--sencell_epoch', type=int, default=40, 
+                       help='Number of epochs to train the Sencell model')
+    parser.add_argument('--cell_optim_epoch', type=int, default=50, 
+                       help='Number of epochs for cell embedding optimization')
+    parser.add_argument('--learning_rate', type=float, default=0.01, 
+                       help='Initial learning rate')
+    parser.add_argument('--batch_id', type=int, default=0, 
+                       help='Batch ID for processing')
+
+    args = parser.parse_args()
+    
+    # Validate arguments
+    if args.emb_size <= 0:
+        parser.error("Embedding size must be positive")
+    
+    if args.gat_epoch <= 0 or args.sencell_epoch <= 0 or args.cell_optim_epoch <= 0:
+        parser.error("Number of epochs must be positive")
+    
+    return args
+
 
 
 
@@ -464,47 +524,6 @@ def convert_to_adj_v2(ccc_matrix, t=0.8):
     adj_matrix = compute_adj_matrix(ccc_matrix)
     result_transformed_masked = np.where(adj_matrix >= t, adj_matrix, 0)
     return result_transformed_masked
-    
-
-
-# def positional_encoding(g, pos_enc_dim=32):
-#     """
-#         Graph positional encoding v/ Laplacian eigenvectors
-#     """
-#     print("Caculate pos encoding ...")
-#     adjacency_matrix = g.adjacency_matrix().to_dense()
-#     # convert to scipy sparse matrix
-#     A = scsp.csr_matrix(adjacency_matrix.numpy())
-#     N = scsp.diags(dgl.backend.asnumpy(g.in_degrees()).clip(1) ** -0.5, dtype=float)
-#     L = scsp.eye(g.number_of_nodes()) - N * A * N
-
-#     # Eigenvectors with numpy
-#     EigVal, EigVec = np.linalg.eig(L.toarray())
-#     idx = EigVal.argsort() # increasing order
-#     EigVal, EigVec = EigVal[idx], np.real(EigVec[:,idx])
-#     g.ndata['pos_enc'] = torch.from_numpy(EigVec[:,1:pos_enc_dim+1]).float() 
-    
-#     return g
-
-
-import scipy.sparse.linalg as lg
-
-# def positional_encoding_v1(g, pos_enc_dim=32):
-#     """
-#         Graph positional encoding v/ Laplacian eigenvectors
-#     """
-#     print("Calculate pos encoding ...")
-#     adjacency_matrix = g.adjacency_matrix().to_dense()
-#     # Convert to scipy sparse matrix
-#     A = scsp.csr_matrix(adjacency_matrix.numpy())
-#     N = scsp.diags(dgl.backend.asnumpy(g.in_degrees()).clip(1) ** -0.5, dtype=float)
-#     L = scsp.eye(g.number_of_nodes()) - N * A * N
-
-#     # Eigenvectors with scipy for sparse matrices
-#     EigVal, EigVec = lg.eigsh(L, k=pos_enc_dim+1, which='SM')  # smallest eigenvalues
-#     g.ndata['pos_enc'] = torch.from_numpy(EigVec[:,1:]).float() 
-    
-#     return g
 
 
 def build_ccc_graph(gene_cell,gene_names):
@@ -513,27 +532,6 @@ def build_ccc_graph(gene_cell,gene_names):
 
     ccc_matrix=ccc_matrix*adj_matrix
     return adj_matrix,ccc_matrix
-
-
-# def update_dglgraph(cellmodel,embs,dgl_graph,args):
-#     cell_embs=embs[args.gene_num:]
-#     pos_embs=[]
-#     for i in range(args.cell_num):
-#         pos_embs.append(dgl_graph.nodes[i].data['pos_enc'].reshape(1,-1))
-
-#     pos_embs=torch.cat(pos_embs)
-#     new_emb=torch.cat([cell_embs,pos_embs],axis=1)
-#     result_emb=cellmodel.get_embeddings(new_emb,args.device).detach().cpu().numpy()
-
-#     adj_matrix=convert_to_adj_v2(result_emb,t=0.4)
-    
-#     index1, index2 = np.nonzero(adj_matrix)
-#     print('the number of edges:', len(index1))
-
-#     dgl_graph = dgl.graph((index1, index2),num_nodes=args.cell_num)
-    
-#     dgl_graph=positional_encoding(dgl_graph)
-#     return dgl_graph,adj_matrix
 
 
 def get_sencell_cover(old_sencell_dict, sencell_dict):
