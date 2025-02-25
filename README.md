@@ -1,6 +1,6 @@
 # DeepSAS
 
-DeepSAS (Deep Learning for Senescence-Associated Signature) is a computational framework designed to identify senescent cells and senescence-associated genes from single-cell RNA sequencing data.
+DeepSAS (**Deep**-learning framework for cell-type-specific **S**nCs **A**nd **S**nGs) is a computational framework designed to identify senescent cells and senescence-associated genes from single-cell RNA sequencing data.
 
 ## Overview
 
