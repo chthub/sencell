@@ -60,13 +60,14 @@ nohup uv run python -u deepsas_v1.py --output_dir ./outputs --exp_name example -
 ```
 You can also specify your input for your .h5ad file using the argument --input_data_count
 
-For the visualization of SnCs and SnGs, please follow the tutorial in the [`plot_snc.ipynb`](./plot_snc.ipynb) and [`plot_nsnc.ipynb`](./plot_nsnc.ipynb). 
-
 To generate 3 table of SnGs:
 ```bash
 uv run python -u generate_3tables.py --output_dir ./outputs --exp_name example --device_index 0
 ```
 generate_3tables.py needs two inputs; .h5ad file and DeepSAS output. you can use --input_data_count and --exp_name to load your .h5ad and DeepSAS output respectively.
+
+For the visualization and downstream analysis of SnCs and SnGs, please follow the tutorial in the [`tutorial.ipynb`](./tutorial.ipynb).
+
 
 #### Important Arguments
 
