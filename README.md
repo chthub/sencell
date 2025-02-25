@@ -1,69 +1,47 @@
 # Deep-learning framework for cell-type-specific SnCs And SnGs (DeepSAS)
+In this branch we show how to do subsampling for your anndata object, run DeepSAS, and generate tables/results for each subsampled object
 
-## Overview
-
-This Python-based framework facilitates the advanced analysis of senescent cells using a variety of deep learning techniques, including graph neural networks and dimensionality reduction via autoencoders. Designed for scalability and robustness, the framework supports various datasets, integrates with modern machine learning tools like PyTorch and scanpy, and offers extensive capabilities for visualizing data.
-
-
-## Key Features
-
-- **Data Preprocessing**: Standardize and preprocess raw data for further analysis.
-- **Dimensionality Reduction**: Use autoencoders to reduce data dimensions effectively, capturing essential features.
-- **Graph Neural Networks**: Leverage Graph Attention Networks (GAT) to handle complex data structures typical in biological data.
-- **Senescent Cell Identification**: Specialized models to detect and analyze senescent cells and their genetic markers.
-- **Experiment Tracking**: Integration with Weights & Biases for real-time tracking of model performance and metrics.
-- **Visualization**: Utilize seaborn and matplotlib for detailed visual representations of data insights.
-
-## Getting Started
-
-### Prerequisites
-
-Ensure you have Python 3.8 or later installed. This project is developed and tested on Linux and macOS environments.
-
-### Installation
-
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/chthub/sencell.git
-   cd sencell/
-   git checkout deepsas-v1
-   ```
-
-2. **Set Up a uv Environment** (recommended):
-   We recommend to use uv for the environment mangement. Check this [link](https://docs.astral.sh/uv/) to install uv.
-
-   ```bash
-   uv venv --python 3.8.20
-   source .venv/bin/activate
-   ```
-
-4. **Install Dependencies**:
-   
-   ```bash
-   uv pip install numpy seaborn matplotlib pandas tabulate linetimer scikit-learn ipykernel 'scanpy[leiden]' tqdm 
-   ```
-   For [Pytorch](https://pytorch.org/) and [PyG](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html),  ensure you select the CUDA version that best suits your system. Below is an example from our test environment:
-   ```bash
-   uv pip install torch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 --index-url https://download.pytorch.org/whl/cu121
-   uv pip install torch_geometric pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.4.0+cu121.html 
-   ```
-
-4. **Environment Variables**:
-   Set necessary environment variables, if any (e.g., PYTHONHASHSEED for reproducibility).
 
 ### Usage
 
-Run the main script using the following command with required flags:
+1. susampling your anndata object using script subsampling.py. Once you created subsamples you can use 'run_experiments.sh' to loop through each subsample and run DeepSAS
 
 ```bash
-nohup uv run python -u deepsas_v1.py --output_dir ./outputs --exp_name example --device_index 0 --retrain > ./example.log 2>&1 &
-```
-You can also specify your input for your .h5ad file using the argument `--input_data_count`
 
-To generate 3 table of SnGs:
-```bash
-uv run python -u generate_3tables.py --output_dir ./outputs --exp_name example --device_index 0
+for i in {1..28}
+do
+    # Define the file path dynamically
+    FILE_PATH="/path/to/your/subsamples/subsample_${i}.h5ad"####the subsampling.py will create subsamples with number depend on the total cell size eg. subsample_1.h5ad, subsample_2.h5ad, ...
+    
+    # Define the experiment name dynamically
+    EXP_NAME="Data_${i}_013025"
+    
+    # Run your command (replace `your_command` with the actual command you want to execute)
+    uv run python -u deepsas_v1.py --input_data_count "$FILE_PATH" --output_dir ./outputs --exp_name "$FILE_PATH" --device_index 4 --timestamp '013025' --retrain
+
+    # Print (optional, for debugging)
+    echo "Processing file: $FILE_PATH with experiment name: $EXP_NAME"
+done
 ```
+
+To generate 3 table of SnGs run 'Generate_table_sampling.sh' :
+```bash
+for i in {1..28}
+do
+    # Define the file path dynamically
+    FILE_PATH="/path/to/your/subsamples/subsample_${i}.h5ad"
+    
+    # Define the experiment name dynamically
+    EXP_NAME="Data_${i}_022425"
+    
+    # Run your command (replace `your_command` with the actual command you want to execute)
+    uv run python -u generate_3tables.py --input_data_count "$FILE_PATH" --output_dir ./outputs --exp_name "$FILE_PATH" --device_index 4 --timestamp '022425' --retrain
+
+    # Print (optional, for debugging)
+    echo "Processing file: $FILE_PATH with experiment name: $EXP_NAME"
+done
+```
+This code will generate a folder for each subsample and each folder contail sncG and sncC results
 The `generate_3tables.py` needs two inputs: .h5ad file and DeepSAS output. you can use `--input_data_count` and `--exp_name` to load your .h5ad and DeepSAS output respectively.
 
 For the visualization and downstream analysis of SnCs and SnGs, please follow the tutorial in the [`tutorial.ipynb`](./tutorial.ipynb).
