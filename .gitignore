@@ -10,10 +10,6 @@
 !plot_figure.py
 !generate_3tables.py
 
-
-!plot_snc.ipynb
-!plot_nsnc.ipynb
-
 !senescence_marker_list.csv
 
 !example_data/
@@ -21,3 +17,4 @@
 
 !.gitignore
 !README.md
+!tutorial.ipynb

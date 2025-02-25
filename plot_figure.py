@@ -4,6 +4,9 @@ import seaborn as sns
 import gseapy as gp
 import os
 
+import scanpy as sp
+import torch
+
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
@@ -84,6 +87,93 @@ color_ls = [
     "#7b68ee",
     "#ffb6c1",
 ]
+
+
+
+
+def preprocess_plot(raw_adata):
+    adata_umap=raw_adata.copy()
+    sp.pp.filter_cells(adata_umap, min_genes=200)
+    sp.pp.filter_genes(adata_umap, min_cells=3)
+    # adata_umap_counts=adata_umap.X.copy()
+
+    # Normalize the data to 10,000 reads per cell, log-transform
+    sp.pp.normalize_total(adata_umap, target_sum=1e4)
+    sp.pp.log1p(adata_umap)
+
+    # Identify highly variable genes
+    sp.pp.highly_variable_genes(adata_umap, min_mean=0.0125, max_mean=3, min_disp=0.5)
+    # adata = adata[:, adata.var.highly_variable]
+
+    # Regress out effects of total counts per cell and the percentage of mitochondrial genes
+    # sc.pp.regress_out(adata, ['n_counts', 'percent_mito'])
+
+    # Scale the data
+    sp.pp.scale(adata_umap, max_value=10)
+
+    # Run PCA
+    sp.tl.pca(adata_umap, svd_solver='arpack')
+
+    # Compute the neighborhood graph
+    sp.pp.neighbors(adata_umap, n_neighbors=10, n_pcs=40)
+
+    # Run UMAP
+    sp.tl.umap(adata_umap)
+    return adata_umap
+
+
+
+def check_celltypes(adata, predicted_cell_indexs):
+    res=[]
+    for i in predicted_cell_indexs:
+        res.append(adata.obs.iloc[i-adata.shape[1]].clusters)
+    from collections import Counter
+    print("snc in different cell types: ",Counter(res))
+    return Counter(res)
+
+def load_snc_info(new_data,file_path,threshold=10):
+    adata=new_data.copy()
+
+    sencell_dict,sen_gene_ls,attention_scores,edge_index_selfloop=torch.load(file_path)
+    sencell_indexs=list(sencell_dict.keys())
+
+    a=dict(check_celltypes(new_data,sencell_indexs))
+    sorted_dict = dict(sorted(a.items(), key=lambda item: item[1], reverse=True))
+
+    # select cell types, for all ct
+    selected_ct=[]
+    for key, value in sorted_dict.items():
+        if value >= threshold:
+            selected_ct.append(key)
+
+    sencell_indexs_updated=[]
+    for i in sencell_indexs:
+        ct=adata.obs.iloc[i-new_data.shape[1]].clusters
+        if ct in selected_ct:
+            sencell_indexs_updated.append(i)
+            
+    sencell_indexs=sencell_indexs_updated
+    row_indices= np.array(sencell_indexs)-new_data.shape[1]
+    new_column = np.array(['normal']*adata.shape[0])
+    new_column[row_indices] = 'SnC'
+    adata.obs['is_sen'] = new_column
+
+    adata.obs['clusters']=adata.obs['clusters'].astype(str)
+
+    def create_column(row):
+        if row['is_sen']=='SnC':
+            return 'SnC'
+        else:
+            return row['clusters']
+    adata.obs['new_ct'] = adata.obs.apply(create_column, axis=1)
+
+    print(f"Number of SnC: {adata.obs['is_sen'].value_counts()['SnC']}")
+
+    sub_sencells=adata[adata.obs['is_sen']=='SnC']
+    sub_sencells=sub_sencells[sub_sencells.obs["clusters"].isin(selected_ct)]
+    
+    return adata, sub_sencells
+
 
 
 def generate_umap(

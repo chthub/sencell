@@ -95,7 +95,9 @@ else:
 new_data, markers_index,\
     sen_gene_ls, nonsen_gene_ls, gene_names = utils.process_data(
         adata, cluster_cell_ls, cell_cluster_arr,args)
-    
+
+new_data.write_h5ad(os.path.join(args.output_dir, f'{args.exp_name}_new_data.h5ad'))
+
 gene_cell = new_data.X.toarray().T
 args.gene_num = gene_cell.shape[0]
 args.cell_num = gene_cell.shape[1]
