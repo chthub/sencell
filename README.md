@@ -68,6 +68,8 @@ The `generate_3tables.py` needs two inputs: .h5ad file and DeepSAS output. you c
 
 For the visualization and downstream analysis of SnCs and SnGs, please follow the tutorial in the [`tutorial.ipynb`](./tutorial.ipynb).
 
+To run  the DeepSAS for large data file, check this [guide](./Sampling_Tutorial.md).
+
 
 ## Input Data Format
 
