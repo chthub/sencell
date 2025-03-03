@@ -1,23 +1,8 @@
-###########################
-##doing subsampling 
-#total Cells: Calculate the total number of cells in your dataset (N).
-
-#Subsample Size: Choose the number of cells (n) in each subsample. This is based on the capacity of your deep learning model and hardware.
-
-#Subsampling Iterations (k): Estimate the number of subsamples needed:
-
-
-#𝑘=⌈𝑁/𝑛⌉
 import scanpy as sc
-import pandas as pd
-import os
 import numpy as np
+import os
+import argparse
 
-##read the data
-adata=sc.read_h5ad('your_data.h5ad')
-
-
-# Function to perform stratified subsampling
 def stratified_subsample(adata, sample_size, cluster_key='clusters'):
     """
     Perform stratified subsampling on an AnnData object.
@@ -30,50 +15,62 @@ def stratified_subsample(adata, sample_size, cluster_key='clusters'):
     Returns:
     - Subsampled AnnData object
     """
-    # Calculate the proportion of cells in each cluster
+    # Check if the cluster_key exists
+    if cluster_key not in adata.obs:
+        raise ValueError(f"Cluster key '{cluster_key}' not found in adata.obs. Ensure the dataset has clusters.")
+
+    # Get cluster proportions
     cluster_counts = adata.obs[cluster_key].value_counts()
     cluster_proportions = cluster_counts / cluster_counts.sum()
-    
-    # Determine the number of cells to sample per cluster
+
+    # Calculate per-cluster sample sizes
     cluster_sample_sizes = (cluster_proportions * sample_size).round().astype(int)
-    
+
     # Perform stratified sampling
     sampled_indices = []
     for cluster, count in cluster_sample_sizes.items():
         cluster_indices = adata.obs.index[adata.obs[cluster_key] == cluster]
-        sampled_indices.extend(np.random.choice(cluster_indices, size=min(len(cluster_indices), count), replace=False))#cells within each cluster are selected without replacement, meaning the same cell barcode won't be picked more than once within a single subsample
+        sampled_indices.extend(np.random.choice(cluster_indices, size=min(len(cluster_indices), count), replace=False))
     
     # Return subsampled AnnData object
     return adata[sampled_indices].copy()
 
+def main(input_file, subsample_size, output_dir):
+    """
+    Main function to perform subsampling and save results.
 
-# Parameters
-subsample_size = 30000
-num_iterations = int(np.ceil(adata.n_obs / subsample_size))  # Estimate number of iterations
+    Parameters:
+    - input_file: Path to input .h5ad file
+    - subsample_size: Number of cells per subsample
+    - output_dir: Directory to save subsampled datasets
+    """
+    # Load the dataset
+    print(f"Loading data from: {input_file}")
+    adata = sc.read_h5ad(input_file)
 
-# Perform subsampling in iterations
-subsampled_datasets = {}
+    # Compute number of subsampling iterations
+    num_iterations = int(np.ceil(adata.n_obs / subsample_size))
+    print(f"Total cells: {adata.n_obs} | Subsample size: {subsample_size} | Estimated iterations: {num_iterations}")
 
-for i in range(num_iterations):
-    subsampled_adata = stratified_subsample(adata, subsample_size, cluster_key='clusters')
-    subsampled_datasets[i]=subsampled_adata
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
 
-    # Print progress
-    print(f"Iteration {i + 1}/{num_iterations}: Subsampled {subsampled_adata.n_obs} cells")
+    # Perform subsampling and save outputs
+    for i in range(num_iterations):
+        subsampled_adata = stratified_subsample(adata, subsample_size, cluster_key='clusters')
 
+        # Save the subsampled dataset
+        output_file = os.path.join(output_dir, f"subsample_{i}.h5ad")
+        subsampled_adata.write(output_file)
+        print(f"Iteration {i+1}/{num_iterations}: Saved {subsampled_adata.n_obs} cells to {output_file}")
 
-subsampled_datasets
+    print(f" Subsampling completed! All files saved in {output_dir}")
 
-##save the subsamples 
-import os
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Subsample an h5ad file based on a given subsample size.")
+    parser.add_argument("--input", required=True, help="Path to the input .h5ad file")
+    parser.add_argument("--subsample_size", type=int, required=True, help="Number of cells per subsample")
+    parser.add_argument("--output", required=True, help="Directory to save the output subsampled files")
 
-# Directory to save subsampled datasets
-output_dir = "./subsamples"
-os.makedirs(output_dir, exist_ok=True)
-
-# Save each subsample with its iteration number
-for iteration, adata in subsampled_datasets.items():
-    file_path = os.path.join(output_dir, f"subsample_{iteration}.h5ad")
-    adata.write(file_path)
-    print(f"Saved: {file_path}")
-    
+    args = parser.parse_args()
+    main(args.input, args.subsample_size, args.output)
