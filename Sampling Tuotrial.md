@@ -1,4 +1,4 @@
-# Deep-learning framework for cell-type-specific SnCs And SnGs (DeepSAS)
+# Run DeepSAS by subsampling your large anndata object
 In this branch we show how to do subsampling for your anndata object, run DeepSAS, and generate tables/results for each subsampled object
 
 
