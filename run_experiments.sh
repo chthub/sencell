@@ -1,20 +1,27 @@
 #!/bin/bash
 
-# Loop from 0 to 28
+# Define input and output directories
+SUBSAMPLE_DIR="/path/to/your/subsamples"  # Update this to your subsample directory
+OUTPUT_DIR="./outputs"
+DEVICE_INDEX=4  # Set your GPU device index
 
-cd /bmbl_data/ahmed/sencell
+# Loop over all subsample files dynamically
+for FILE_PATH in "$SUBSAMPLE_DIR"/subsample_*.h5ad; do
+    # Extract the iteration number from the filename (e.g., "subsample_1.h5ad" -> "1")
+    FILE_NAME=$(basename "$FILE_PATH")  # Extract filename
+    ITER_NUM=$(echo "$FILE_NAME" | grep -oP '\d+')  # Extract numeric part
 
-for i in {1..28}
-do
-    # Define the file path dynamically
-    FILE_PATH="/bmbl_data/ahmed/eye_atlas/subsamples/subsample_${i}.h5ad"
-    
     # Define the experiment name dynamically
-    EXP_NAME="Data_${i}_013025"
-    
-    # Run your command (replace `your_command` with the actual command you want to execute)
-    uv run python -u deepsas_v1.py --input_data_count "$FILE_PATH" --output_dir ./outputs --exp_name "$FILE_PATH" --device_index 4 --timestamp '013025' --retrain
+    EXP_NAME="Data_${ITER_NUM}_013025"
 
-    # Print (optional, for debugging)
+    # Run the DeepSAS command for each subsample
+    uv run python -u deepsas_v1.py \
+        --input_data_count "$FILE_PATH" \
+        --output_dir "$OUTPUT_DIR" \
+        --exp_name "$EXP_NAME" \
+        --device_index "$DEVICE_INDEX" \
+        --retrain
+
+    # Print for debugging
     echo "Processing file: $FILE_PATH with experiment name: $EXP_NAME"
 done
