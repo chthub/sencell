@@ -48,7 +48,7 @@ once you adjust SUBSAMPLE_DIR, OUTPUT_DIR, and DEVICE_INDEX you can save the scr
 
 ```bash
 nohup bash run_experiments.sh
-done
+
 ```
 
 
