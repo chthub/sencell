@@ -7,7 +7,7 @@ In this branch we show how to do subsampling for your anndata object, run DeepSA
 1. susampling your anndata object using script subsampling.py using the following command
 
 ```bash
-uv run python subsample_script.py --input your_data.h5ad --subsample_size 30000 --output ./subsamples
+uv run python subsampling.py --input your_data.h5ad --subsample_size 30000 --output ./subsamples
 ```
 3. Once you created subsamples you can use 'run_experiments.sh' to loop through each subsample and run DeepSAS
 
