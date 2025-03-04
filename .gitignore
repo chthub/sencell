@@ -6,6 +6,9 @@
 !model_AE.py
 !model_GAT.py
 !model_Sencell.py
+!subsampling.py
+!Generate_table_sampling.sh
+!run_experiments.sh
 
 !plot_figure.py
 !generate_3tables.py
@@ -17,4 +20,6 @@
 
 !.gitignore
 !README.md
+!Senescent_Tables_Explanation.md
+!Sampling_Tutorial.md
 !tutorial.ipynb
