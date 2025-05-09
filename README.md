@@ -29,7 +29,7 @@ This project is developed and tested on Linux and macOS environments.
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/chthub/sencell.git
+   git clone https://github.com/chthub/deepsas.git
    cd sencell/
    git checkout deepsas-v1
    ```
